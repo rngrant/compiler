@@ -16,4 +16,3 @@ let command =
 
   
 let () = Command.run ~version:"1.0" ~build_info:"RWO" command
-            
