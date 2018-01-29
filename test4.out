@@ -1,6 +1,6 @@
 Echo the command-line arguments back to the user, one argument per line.
 
-  main.byte [ARGUMENT ...]
+  main.native [ARGUMENT ...]
 
 More detailed information
 

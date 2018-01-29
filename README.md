@@ -26,6 +26,7 @@ and ensure that
 are in you .ocamlinit file
 
 ## Build Instructions
+
 You can build the project with
 make
 
