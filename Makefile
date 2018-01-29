@@ -33,4 +33,4 @@ sanity:
 	ocamlfind query Core 
 
 test: native
-	echo '[1, 2, "three", {"four": 4}]' | ./main.native
+	./run_test.sh

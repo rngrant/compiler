@@ -5,7 +5,7 @@ let command =
     ~summary:"Echo the command-line arguments back to the user, one argument per line."
     ~readme:(fun () -> "More detailed information")
     Command.Spec.(empty
-		  +> flag "-l" no_arg ~doc:"prints the lengths of each of the arguments"
+		  +> flag "-length" no_arg ~doc:"prints the lengths of each of the arguments"
 		  +> anon (sequence ("argument" %: string))
     )
     (fun use_length strings () ->
