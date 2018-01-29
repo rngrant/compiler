@@ -1,3 +1,5 @@
+# Make file based on Makefile here:
+# https://github.com/ocaml/ocamlbuild/blob/master/examples/02-subdirs/Makefile
 #
 # Pure OCaml, package from Opam, two directories
 #
@@ -11,7 +13,7 @@
 OCB_FLAGS = -use-ocamlfind -I src -I lib
 OCB = ocamlbuild $(OCB_FLAGS)
 
-all: native byte # profile debug
+all: native # byte profile debug
 
 clean:
 	$(OCB) -clean
