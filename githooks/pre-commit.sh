@@ -55,3 +55,5 @@ Fix test cases to procced
 EOF
 	exit 1
 fi
+echo 
+echo "pre-commit hook successful"
