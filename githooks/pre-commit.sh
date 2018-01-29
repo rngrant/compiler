@@ -6,6 +6,8 @@
 # it wants to stop the commit.
 #
 # To enable this hook, rename this file to "pre-commit".
+echo "pre-commit hook running"
+
 
 if git rev-parse --verify HEAD >/dev/null 2>&1
 then
