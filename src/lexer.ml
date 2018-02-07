@@ -9,6 +9,7 @@ type token =
   | TLParen
   | TRParen
   | TBinOp of binOpToken
+  | TIF
 
 let string_of_token (t:token) : string =
   let string_of_op op =
@@ -19,11 +20,15 @@ let string_of_token (t:token) : string =
       | BTDivide -> "/"
       | BTLessEq -> "<="
   in
+  let string_of_bool b = if b then "true" else "false"
+  in 
   match t with
-  | TInt n  -> string_of_int n
-  | TLParen -> "("
-  | TRParen -> ")"
-  | TBinOp op -> string_of_op op
+    | TBool b -> string_of_bool b
+    | TInt n  -> string_of_int n
+    | TLParen -> "("
+    | TRParen -> ")"    
+    | TBinOp op -> string_of_op op
+    | TIF       -> "if"
 
 let string_of_token_list (toks:token list) : string =
   String.concat "," (List.map string_of_token toks)
@@ -74,6 +79,7 @@ let lex (src:char Stream.t) : token list =
       match acc with
 	| "true"  -> TBool true
 	| "false" -> TBool false
+	| "if"    -> TIF
 	|    _    -> failwith (Printf.sprintf "Unbound value found: %s" acc)
   in
   let rec lex_operator acc =
