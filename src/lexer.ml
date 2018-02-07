@@ -5,6 +5,7 @@ type binOpToken = BTPlus| BTMinus| BTTimes | BTDivide | BTLessEq
 
 type token =
   | TInt of int
+  | TFloat of float      
   | TBool of bool
   | TLParen
   | TRParen
@@ -24,7 +25,8 @@ let string_of_token (t:token) : string =
   in 
   match t with
     | TBool b -> string_of_bool b
-    | TInt n  -> string_of_int n
+    | TInt n  -> string_of_int n      
+    | TFloat f  -> string_of_float f
     | TLParen -> "("
     | TRParen -> ")"    
     | TBinOp op -> string_of_op op
@@ -66,11 +68,22 @@ let is_alpha (ch:char) :bool =
     
 (* Note: lex contains two nested helper functions, lex_num and go *)
 let lex (src:char Stream.t) : token list =
+  let rec lex_int acc =
+    if is_digit (peek src) then
+      lex_int (acc ^ (Char.escaped (advance src)))
+    else
+       acc
+  in
   let rec lex_num acc =
     if is_digit (peek src) then
       lex_num (acc ^ (Char.escaped (advance src)))
+    else if (peek src) =='.' then
+      begin
+	advance src |> ignore;
+	TFloat (float_of_string (acc^"."^ lex_int ""))
+      end
     else
-       TInt (int_of_string acc)
+      TInt (int_of_string acc)
   in
   let rec lex_words acc =
     if is_alpha (peek src) then

@@ -36,6 +36,7 @@ let rec parse (toks:token list) : (exp * token list) =
     match peek toks with
       | TInt n  -> (EInt n, advance toks)
       | TBool b  -> (EBool b, advance toks)
+      | TFloat f  -> (EFloat f, advance toks)	
       | TLParen -> begin
         let toks       = consume TLParen toks in
 	match peek toks with
