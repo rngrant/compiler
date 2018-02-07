@@ -50,36 +50,42 @@ let is_empty (src:char Stream.t) : bool =
     Stream.empty src; true
   with
     Stream.Failure -> false
-
-let rec lex_num (stream:char Stream.t) accumulator :int =
-  if is_digit (peek stream) then
-    lex_num stream (accumulator ^ (Char.escaped (Stream.next stream)))
-  else
-    int_of_string accumulator
       
 (* Lexer *)
-let lex (stream:char Stream.t) : token list =
-  let tokens = ref [] in
-  (try
-    while (not (is_empty stream)) do
-      let ch = Stream.next stream in
+(* Note: lex contains two nested helper functions, lex_num and go *)
+(* Taken from
+ * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lexer.ml
+ *)
+let lex (src:char Stream.t) : token list =
+  let rec lex_num acc =
+    if is_digit (peek src) then
+      lex_num (acc ^ (Char.escaped (advance src)))
+    else
+      int_of_string acc
+  in
+  let rec go () =
+    if not (is_empty src) then
+      let ch = peek src in
+      (* Note: the |> operator takes the result of the left-hand side
+       * and feeds it as an argument to the function on the right-hand
+       * side.  ignore has type 'a -> unit---it allows us to throw
+       * away the return type of a function we don't care about *)
       match ch with
-	| '+' -> advance stream |> ignore; tokens := Plus::!tokens
-	| '(' -> advance stream |> ignore; tokens := LParen::!tokens
-	| ')' -> advance stream |> ignore; tokens := RParen::!tokens
-	| _   ->
-	  if (is_whitespace ch) then
-	    advance stream |> ignore
-	  else if (is_digit ch)  then begin advance stream |> ignore; tokens := Num (lex_num stream "")::!tokens end
-   else
-    failwith (Printf.sprintf "Unexpected character found: %c" ch)
-    done
-  with
-      End_of_file -> ());
-  List.rev !tokens
-
-
-    
+      | '(' -> advance src |> ignore; LParen :: go ()
+      | ')' -> advance src |> ignore; RParen :: go ()
+      | '+' -> advance src |> ignore; Plus :: go ()
+      | _   ->
+        if is_whitespace ch then
+          begin advance src |> ignore; go () end
+        else if is_digit ch then
+          let n = lex_num "" in
+          Num n :: go ()
+        else
+          failwith (Printf.sprintf "Unexpected character found: %c" ch)
+    else
+      []
+  in
+    go ()
     
 (* Parser *)    
 
