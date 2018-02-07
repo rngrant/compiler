@@ -1,18 +1,27 @@
 (*Starter code for this exercise copied from
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lexer.ml *)
 
+type binOpToken = BTPlus| BTMinus| BTTimes | BTDivide
+
 type token =
   | TInt of int
   | TLParen
   | TRParen
-  | TPlus
+  | TBinOp of binOpToken
 
 let string_of_token (t:token) : string =
+  let string_of_op op =
+    match op with
+      | BTPlus   -> "+"
+      | BTMinus  -> "-"
+      | BTTimes  -> "*"
+      | BTDivide -> "/"	
+  in
   match t with
   | TInt n  -> string_of_int n
   | TLParen -> "("
   | TRParen -> ")"
-  | TPlus   -> "+"
+  | TBinOp op -> string_of_op op
 
 let string_of_token_list (toks:token list) : string =
   String.concat "," (List.map string_of_token toks)
@@ -58,7 +67,10 @@ let lex (src:char Stream.t) : token list =
       match ch with
       | '(' -> advance src |> ignore; TLParen :: go ()
       | ')' -> advance src |> ignore; TRParen :: go ()
-      | '+' -> advance src |> ignore; TPlus :: go ()
+      | '+' -> advance src |> ignore; (TBinOp BTPlus) :: go ()
+      | '-' -> advance src |> ignore; (TBinOp BTMinus) :: go ()
+      | '*' -> advance src |> ignore; (TBinOp BTTimes) :: go ()
+      | '/' -> advance src |> ignore; (TBinOp BTDivide) :: go ()	
       | _   ->
         if is_whitespace ch then
           begin advance src |> ignore; go () end
