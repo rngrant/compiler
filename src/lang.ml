@@ -17,6 +17,7 @@ type exp =
   | EInt of int
   | EBool of bool
   | EBin of binOpExpression*exp * exp
+  | EIF  of exp*exp*exp
 
 
 
@@ -33,6 +34,10 @@ let rec string_of_expression (e:exp): string =
   match e with
     | EInt  n  -> string_of_int  n
     | EBool b  -> string_of_bool b
+    | EIF (e1,e2,e3)  -> "( if "
+      ^(string_of_expression e1) ^" "
+      ^(string_of_expression e2)^ " "
+      ^ (string_of_expression e3) ^ " )"
     | EBin (op,e1,e2) -> "( "
       ^ (string_of_bin_op op) ^ " "
       ^ (string_of_expression e1)^ " "
@@ -40,9 +45,10 @@ let rec string_of_expression (e:exp): string =
     
 let rec interpret (e:exp) : value =
   match e with
-    | EInt n        -> VInt n
-    | EBool b        -> VBool b
+    | EInt n           -> VInt n
+    | EBool b          -> VBool b
     | EBin (op,e1, e2) ->interpret_bin_op op e1 e2
+    | EIF (e1,e2,e3)   -> if interpret_bool e1 then interpret e2 else interpret e3
       
 and interpret_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=
   match op with
@@ -61,9 +67,13 @@ and interpret_int (e:exp) : int =
   let v = interpret e in
   match v with
     | VInt n  -> n
-    | _ -> failwith (Printf.sprintf "Type error, was expecting int instead got: %s" (string_of_value v))
+    | _ -> failwith (Printf.sprintf
+		       "Type error, was expecting int instead got: %s from %s"
+		       (string_of_value v) (string_of_expression e))
 and interpret_bool (e:exp) : bool=
     let v = interpret e in
   match v with
     |  VBool b -> b
-    |  _ -> failwith (Printf.sprintf "Type error, was expecting bool instead got: %s"  (string_of_value v))
+    |  _ -> failwith (Printf.sprintf
+			"Type error, was expecting bool instead got: %s from %s"
+			(string_of_value v) (string_of_expression e))

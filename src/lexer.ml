@@ -61,7 +61,7 @@ let is_operator (ch:char) :bool =
   List.fold_left (fun a b -> a||b) false (List.map (fun c -> c== ch) operators)
 
 let is_alpha (ch:char) :bool =
-  let alpha = ['t';'r';'u';'e';'f'; 'a';'l';'s'] in
+  let alpha = ['t';'r';'u';'e';'f'; 'a';'l';'s';'i'] in
   List.fold_left (fun a b -> a||b) false (List.map (fun c -> c== ch) alpha)
     
 (* Note: lex contains two nested helper functions, lex_num and go *)

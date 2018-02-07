@@ -38,10 +38,22 @@ let rec parse (toks:token list) : (exp * token list) =
       | TBool b  -> (EBool b, advance toks)
       | TLParen -> begin
         let toks       = consume TLParen toks in
-        let (op,toks)  = consume_bin_op toks in
-        let (e1, toks) = parse toks in
-        let (e2, toks) = parse toks in
-        let toks       = consume TRParen toks in
-        (EBin (op,e1, e2), toks)
+	match peek toks with
+	  |TBinOp _ ->begin
+	    let (op,toks)  = consume_bin_op toks in
+            let (e1, toks) = parse toks in
+            let (e2, toks) = parse toks in
+            let toks       = consume TRParen toks in
+            (EBin (op,e1, e2), toks)
+	  end
+	  | TIF -> begin
+	    let toks  = consume TIF toks in
+            let (e1, toks) = parse toks in
+            let (e2, toks) = parse toks in
+	    let (e3, toks) = parse toks in
+            let toks       = consume TRParen toks in
+            (EIF (e1, e2,e3), toks)
+	  end
+	  | t -> failwith (Printf.sprintf "Unexpected token found: %s" (string_of_token t))
       end
       | t      -> failwith (Printf.sprintf "Unexpected token found: %s" (string_of_token t))
