@@ -1,13 +1,14 @@
 (*Starter code for this exercise copied from
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lang.ml *)
 
-type value = VInt of int | VBool of bool | VFloat of float
+type value = VInt of int | VBool of bool | VFloat of float | VNaN
 
 
 let string_of_bool b = if b then "true" else "false"
     
 let string_of_value (v:value) : string=
   match v with
+    | VNaN     -> "NaN"
     | VInt   n -> string_of_int n
     | VBool  b -> string_of_bool b
     | VFloat f -> string_of_float f
@@ -15,11 +16,13 @@ let string_of_value (v:value) : string=
 type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq
     
 type exp =
+  | ENaN
   | EInt of int
   | EFloat of float
   | EBool of bool
   | EBin of binOpExpression*exp * exp
   | EIF  of exp*exp*exp
+
 
 
 
@@ -34,6 +37,7 @@ let string_of_bin_op (op:binOpExpression) : string=
     
 let rec string_of_expression (e:exp): string =
   match e with
+    | ENaN     -> "NaN"
     | EInt  n  -> string_of_int  n
     | EBool b  -> string_of_bool b
     | EFloat f -> string_of_float f
@@ -48,7 +52,8 @@ let rec string_of_expression (e:exp): string =
     
 let rec interpret (e:exp) : value =
   match e with
-    | EInt   n         -> VInt n
+    | ENaN             -> VNaN
+    | EInt   n         -> VInt n      
     | EBool  b         -> VBool b
     | EFloat f         -> VFloat f
     | EBin (op,e1, e2) -> interpret_bin_op op e1 e2
@@ -58,6 +63,8 @@ and interpret_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=
   let v1 = interpret e1 in
   let v2 = interpret e2 in
   match (v1,v2) with
+    | (VNaN,_)           -> VNaN
+    | (_,VNaN)	         -> VNaN
     | (VInt n1, VInt n2) -> interpret_bin_op_int op n1 n2
     | (VInt n1, VFloat f2) -> interpret_bin_op_float op (float_of_int n1) f2
     | (VFloat f1, VInt n2) -> interpret_bin_op_float op f1 (float_of_int n2)
@@ -74,12 +81,7 @@ and interpret_bin_op_int (op:binOpExpression) (n1:int) (n2:int)=
     | BSub  -> VInt( n1 - n2)
     | BMult -> VInt( n1 * n2)
     | BLEq  -> VBool (n1 <= n2) 
-    | BDiv  -> if n2 ==0 then
-		 failwith
-		   (Printf.sprintf "Division by zero:(/ %d %d)"
-		      n1
-		      n2)
-	       else VInt( n1 / n2)
+    | BDiv  -> if n2 ==0 then VNaN else VInt( n1 / n2)
 
 and interpret_bin_op_float  (op:binOpExpression) (f1:float) (f2:float)=
   match op with
@@ -87,12 +89,7 @@ and interpret_bin_op_float  (op:binOpExpression) (f1:float) (f2:float)=
     | BSub  -> VFloat( f1 -. f2)
     | BMult -> VFloat( f1 *. f2)
     | BLEq  -> VBool (f1 <= f2) 
-    | BDiv  -> if f2 ==0.0 then
-		 failwith
-		   (Printf.sprintf "Division by zero:(/ %f %f)"
-		      f1
-		      f2)
-	       else VFloat( f1 /. f2)
+    | BDiv  -> if f2 ==0.0 then VNaN else VFloat( f1 /. f2)
 and interpret_bool (e:exp) : bool=
     let v = interpret e in
   match v with

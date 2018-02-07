@@ -9,6 +9,7 @@ type token =
   | TBool of bool
   | TLParen
   | TRParen
+  | TNaN
   | TBinOp of binOpToken
   | TIF
 
@@ -28,7 +29,8 @@ let string_of_token (t:token) : string =
     | TInt n  -> string_of_int n      
     | TFloat f  -> string_of_float f
     | TLParen -> "("
-    | TRParen -> ")"    
+    | TRParen -> ")"
+    | TNaN    -> "NaN"
     | TBinOp op -> string_of_op op
     | TIF       -> "if"
 
@@ -63,7 +65,7 @@ let is_operator (ch:char) :bool =
   List.fold_left (fun a b -> a||b) false (List.map (fun c -> c== ch) operators)
 
 let is_alpha (ch:char) :bool =
-  let alpha = ['t';'r';'u';'e';'f'; 'a';'l';'s';'i'] in
+  let alpha = ['t';'r';'u';'e';'f'; 'a';'l';'s';'i';'N'] in
   List.fold_left (fun a b -> a||b) false (List.map (fun c -> c== ch) alpha)
     
 (* Note: lex contains two nested helper functions, lex_num and go *)
@@ -93,6 +95,7 @@ let lex (src:char Stream.t) : token list =
 	| "true"  -> TBool true
 	| "false" -> TBool false
 	| "if"    -> TIF
+	| "NaN"   -> TNaN
 	|    _    -> failwith (Printf.sprintf "Unbound value found: %s" acc)
   in
   let rec lex_operator acc =

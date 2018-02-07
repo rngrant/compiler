@@ -34,6 +34,7 @@ let rec parse (toks:token list) : (exp * token list) =
     failwith "Unexpected end of token stream"
   else
     match peek toks with
+      | TNaN  -> (ENaN , advance toks)
       | TInt n  -> (EInt n, advance toks)
       | TBool b  -> (EBool b, advance toks)
       | TFloat f  -> (EFloat f, advance toks)	
