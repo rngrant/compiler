@@ -11,11 +11,7 @@ being created primarily for educational purposes.
 Currently, this project implements basic a command line interface.
 
 ## Setup Instructionse
-Ensure that the Core package is installed. If you have opam
-installed,run
-opam install core
-opam install async
-opam install core_extended
+Ensure that OCaml is installed
 
 and ensure that
 \#use "topfind";;
@@ -31,9 +27,43 @@ You can build the project with
 make
 
 ## Run and Test
-After making the project, you can run it using main.native. You can
-also run tests using make test
+After making the project, you can run it by using compiler.native on a
+formated file. Examples of such files are provided in the tests
+directory. You can also run tests using make test. Example test
 
+## Language description
+This project currently supports evaluation of a a language with the following grammar
+
+e ::= n | (+ e1 e2) | (- e1 e2) | (* e1 e2) | (/ e1 e2)
+..    | true | false | (<= e1 e2) | (if e1 e2 e3)
+
+
+Build on 02/06/18:
+### New features
+
+- Created a basic Command line interface.
+- Takes arguments at the command line and returns them
+- Given the -length flag returns the lengths of each argument
+
+### Changes
+
+-  Added ability to lex, parse and evaluate expressions given in file 
+.. format
+- Support for addition, multiplication, subtraction and division
+- Support for booleans
+- Support for the less than or equal operation
+- Support for if expressions
+- Catches type errors, and identifies the expression at fault
+
+
+### Changes
+
+- Complete code overhaul, based partially on
+.. https://github.com/psosera/csc312-example-compiler
+
+### Known Bugs
+
+- No known bugs
 
 ## Changelog
 
