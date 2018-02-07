@@ -10,7 +10,7 @@ type token =
   | TRParen
   | TBinOp of binOpToken
   | TIF
-      
+
 let string_of_token (t:token) : string =
   let string_of_op op =
     match op with
