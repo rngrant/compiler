@@ -1,2 +1,1 @@
-true: package(core, ppx_jane)
-true: thread,debug
+<src> : include

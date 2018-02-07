@@ -1,38 +1,33 @@
-# Make file based on Makefile here:
-# https://github.com/ocaml/ocamlbuild/blob/master/examples/02-subdirs/Makefile
-#
-# Pure OCaml, package from Opam, two directories
-#
+# Copied initial code from
+# https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/Makefile
 
-# - The -I flag introduces sub-directories
-# - -use-ocamlfind is required to find packages (from Opam)
-# - _tags file introduces packages, bin_annot flag for tool chain
+OCBFLAGS :=
+OCB := ocamlbuild $(OCBFLAGS)
 
-.PHONY: all clean byte native profile debug sanity test
+.PHONY: all debug clean top
 
-OCB_FLAGS = -use-ocamlfind -I src -I lib
-OCB = ocamlbuild $(OCB_FLAGS)
+all: compiler.native
+debug: all compiler.cma
 
-all: native # byte profile debug
+%.cma: .FORCE
+	$(OCB) $@
+
+%.cmxa: .FORCE
+	$(OCB) $@
+
+%.native: .FORCE
+	$(OCB) $@
+
+%.p.native: .FORCE
+	$(OCB) $@
+
+%.byte: .FORCE
+	$(OCB) $@
+
+.FORCE:
 
 clean:
 	$(OCB) -clean
 
-native: sanity
-	$(OCB) main.native
-
-byte: sanity
-	$(OCB) main.byte
-
-profile: sanity
-	$(OCB) -tag profile main.native
-
-debug: sanity
-	$(OCB) -tag debug main.byte
-
-# check that packages can be found
-sanity:
-	ocamlfind query Core 
-
-test: native
-	./run_test.sh
+top: compiler.cma
+	utop
