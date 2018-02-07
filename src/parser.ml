@@ -22,6 +22,7 @@ let consume_bin_op  (toks:token list) : binOpExpression*token list =
       | BTMinus  -> BSub
       | BTTimes  -> BMult
       | BTDivide -> BDiv
+      | BTLessEq -> BLEq
   in
   match toks with
   | (TBinOp op) :: toks -> ((op_exp op),toks)
@@ -33,8 +34,9 @@ let rec parse (toks:token list) : (exp * token list) =
     failwith "Unexpected end of token stream"
   else
     match peek toks with
-    | TInt n  -> (EInt n, advance toks)
-    | TLParen -> begin
+      | TInt n  -> (EInt n, advance toks)
+      | TBool b  -> (EBool b, advance toks)
+      | TLParen -> begin
         let toks       = consume TLParen toks in
         let (op,toks)  = consume_bin_op toks in
         let (e1, toks) = parse toks in
@@ -42,4 +44,4 @@ let rec parse (toks:token list) : (exp * token list) =
         let toks       = consume TRParen toks in
         (EBin (op,e1, e2), toks)
       end
-    | t      -> failwith (Printf.sprintf "Unexpected token found: %s" (string_of_token t))
+      | t      -> failwith (Printf.sprintf "Unexpected token found: %s" (string_of_token t))
