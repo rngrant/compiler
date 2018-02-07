@@ -20,10 +20,10 @@ let string_of_bin_op (op:binOpExpression) : string=
 let rec string_of_expression (e:exp): string =
   match e with
     | EInt n          -> string_of_int n
-    | EBin (op,e1,e2) -> "("
-      ^ (string_of_bin_op op)
-      ^ (string_of_expression e1)
-      ^ (string_of_expression e2) ^")"     
+    | EBin (op,e1,e2) -> "( "
+      ^ (string_of_bin_op op) ^ " "
+      ^ (string_of_expression e1)^ " "
+      ^ (string_of_expression e2) ^" )"     
     
 let rec interpret (e:exp) : int =
   let interpret_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=

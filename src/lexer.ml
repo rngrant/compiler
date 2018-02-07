@@ -1,10 +1,11 @@
 (*Starter code for this exercise copied from
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lexer.ml *)
 
-type binOpToken = BTPlus| BTMinus| BTTimes | BTDivide
+type binOpToken = BTPlus| BTMinus| BTTimes | BTDivide | BTLessEq
 
 type token =
   | TInt of int
+  | TBool of bool
   | TLParen
   | TRParen
   | TBinOp of binOpToken
@@ -15,7 +16,8 @@ let string_of_token (t:token) : string =
       | BTPlus   -> "+"
       | BTMinus  -> "-"
       | BTTimes  -> "*"
-      | BTDivide -> "/"	
+      | BTDivide -> "/"
+      | BTLessEq -> "<="
   in
   match t with
   | TInt n  -> string_of_int n
@@ -49,13 +51,38 @@ let is_digit (ch:char) : bool =
   let code = Char.code ch in
   48 <= code && code <= 57
 
+let is_operator (ch:char) :bool =
+  let operators = ['=';'+';'-';'<';'>'; '/'] in
+  List.fold_left (fun a b -> a||b) false (List.map (fun c -> c== ch) operators)
+
+let is_alpha (ch:char) :bool =
+  let alpha = ['t';'r';'u';'e';'f'; 'a';'l';'s'] in
+  List.fold_left (fun a b -> a||b) false (List.map (fun c -> c== ch) alpha)
+    
 (* Note: lex contains two nested helper functions, lex_num and go *)
 let lex (src:char Stream.t) : token list =
   let rec lex_num acc =
     if is_digit (peek src) then
       lex_num (acc ^ (Char.escaped (advance src)))
     else
-      int_of_string acc
+       TInt (int_of_string acc)
+  in
+  let rec lex_words acc =
+    if is_alpha (peek src) then
+      lex_words (acc ^ (Char.escaped (advance src)))
+    else
+      match acc with
+	| "true"  -> TBool true
+	| "false" -> TBool false
+	|    _    -> failwith (Printf.sprintf "Unbound value found: %s" acc)
+  in
+  let rec lex_operator acc =
+    if is_operator (peek src) then
+      lex_operator (acc ^ (Char.escaped (advance src)))
+    else
+      match acc with
+	| "<=" -> TBinOp BTLessEq
+	|  _   ->  failwith (Printf.sprintf "Unexpected operator found: %s" acc)
   in
   let rec go () =
     if not (is_empty src) then
@@ -75,8 +102,14 @@ let lex (src:char Stream.t) : token list =
         if is_whitespace ch then
           begin advance src |> ignore; go () end
         else if is_digit ch then
-          let n = lex_num "" in
-          TInt n :: go ()
+          let num_token = lex_num "" in
+          num_token :: go ()
+	else if is_operator ch then
+	  let op_token = lex_operator "" in
+	  op_token :: go ()
+	else if is_alpha ch then
+	  let word_token = lex_words "" in
+	  word_token :: go ()
         else
           failwith (Printf.sprintf "Unexpected character found: %c" ch)
     else
