@@ -63,17 +63,18 @@ and interpret_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=
   let v1 = interpret e1 in
   let v2 = interpret e2 in
   match (v1,v2) with
+    | (VBool _,_) |  ( _,VBool _)  -> failwith
+      (Printf.sprintf "Was expecting number, instead found :(%s %s %s)"
+	 (string_of_bin_op op)
+	 (string_of_value v1)
+	 (string_of_value v2))
+
     | (VNaN,_)           -> VNaN
     | (_,VNaN)	         -> VNaN
     | (VInt n1, VInt n2) -> interpret_bin_op_int op n1 n2
     | (VInt n1, VFloat f2) -> interpret_bin_op_float op (float_of_int n1) f2
     | (VFloat f1, VInt n2) -> interpret_bin_op_float op f1 (float_of_int n2)
     | (VFloat f1, VFloat f2) -> interpret_bin_op_float op f1 f2
-    | (v1        ,v2     )    -> failwith
-      (Printf.sprintf "Was expecting number, instead found :(%s %s %s)"
-	 (string_of_bin_op op)
-	 (string_of_value v1)
-	 (string_of_value v2))
       
 and interpret_bin_op_int (op:binOpExpression) (n1:int) (n2:int)=
   match op with

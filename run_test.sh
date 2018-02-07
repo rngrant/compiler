@@ -14,3 +14,7 @@ diff tmp.txt~ tests/test6.out
 diff tmp.txt~ tests/test7.out
 ./compiler.native tests/test8.arith > tmp.txt~
 diff tmp.txt~ tests/test8.out
+./compiler.native tests/test9.arith > tmp.txt~
+diff tmp.txt~ tests/test9.out
+./compiler.native tests/test10.arith > tmp.txt~
+diff tmp.txt~ tests/test10.out
