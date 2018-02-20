@@ -55,7 +55,7 @@ let main () = begin
       "Options available:"
   in Arg.parse speclist
   (fun filename ->  input_handler filename !lex_mode !parse_mode
-      |> print_endline) usage_msg
+      |> print_string) usage_msg
 end
   
   
