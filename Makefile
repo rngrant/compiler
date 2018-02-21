@@ -1,7 +1,7 @@
 # Copied initial code from
 # https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/Makefile
 
-OCBFLAGS :=
+OCBFLAGS := -use-ocamlfind -use-menhir -I src
 OCB := ocamlbuild $(OCBFLAGS)
 
 .PHONY: all debug clean top

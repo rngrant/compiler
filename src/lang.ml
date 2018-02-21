@@ -23,9 +23,6 @@ type exp =
   | EBin of binOpExpression*exp * exp
   | EIF  of exp*exp*exp
 
-
-
-
 let string_of_bin_op (op:binOpExpression) : string=
   match op with
     |BAdd  -> "+"
