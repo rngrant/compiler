@@ -3,11 +3,13 @@
  * examples/05-lex-yacc/src/parser.mly *)
 %token <int> INT
 %token <float> FLOAT
+%token NAN
 %token LPAREN RPAREN
-%token IF
+%token IF THEN ELSE
 %token PLUS MINUS TIMES DIV LESSEQ
-(*%left PLUS MINUS        /* lowest precedence */
-%left TIMES DIV         /* medium precedence */*)
+%left PLUS MINUS        /* lowest precedence */
+%left TIMES DIV         /* medium precedence */
+%left LESSEQ            /* highest precedence */
 %start main             /* the entry point */
 %token EOF
 
@@ -27,12 +29,14 @@ main
   ;
 
 expr
-  : n = INT                 { EInt n }
-  | f = FLOAT                {EFloat f}
-  | LPAREN PLUS  e1=expr  e2=expr RPAREN   { EBin (BAdd ,e1,  e2) }
-  | LPAREN MINUS e1=expr e2=expr RPAREN  { EBin (BSub , e1, e2) }
-  | LPAREN TIMES e1=expr  e2=expr RPAREN { EBin (BMult, e1, e2) }
-  | LPAREN DIV   e1=expr e2=expr RPAREN  { EBin (BDiv, e1, e2) }    
-  | LPAREN LESSEQ   e1=expr e2=expr RPAREN  { EBin (BLEq, e1, e2) }
-  | LPAREN IF   e1=expr e2=expr  e3=expr RPAREN  { EIF (e1, e2,e3) }
-  ;
+  : n = INT                { EInt n }
+| f = FLOAT                { EFloat f}
+| NAN                      { ENaN }
+| LPAREN  e1=expr RPAREN   { e1 }
+| e1=expr PLUS   e2=expr   { EBin (BAdd ,e1,  e2) }
+| e1=expr MINUS  e2=expr   { EBin (BSub , e1, e2) }
+| e1=expr TIMES  e2=expr   { EBin (BMult, e1, e2) }
+| e1=expr DIV    e2=expr   { EBin (BDiv, e1, e2) }    
+| e1=expr LESSEQ e2=expr   { EBin (BLEq, e1, e2) }
+| IF   e1=expr THEN e2=expr ELSE e3=expr  { EIF (e1, e2,e3) }
+;

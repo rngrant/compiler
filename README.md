@@ -8,8 +8,8 @@ Implemented by Reilly Noonan Grant
 This project is the begining of a compiler written in OCaml. It is
 being created primarily for educational purposes.
 
-Currently, this project implements a basic parser, and lexer for support
-for a basic interpreter of a programing language.
+Currently, this project implements a basic parser, and lexer for
+support for a basic interpreter of a programing language.
 
 ## Setup Instructionse
 Ensure that OCaml is installed
@@ -36,10 +36,26 @@ directory. You can also run tests using make test. Example test
 This project currently supports evaluation of a
  language with the following grammar
 
-e ::= n | (+ e1 e2) | (- e1 e2) | (* e1 e2) | (/ e1 e2)
-..    | true | false | (<= e1 e2) | (if e1 e2 e3)
+e ::= n | f | (e) | e1 + e2 | e1 - e2 | e1 * e2 | e1 /e2 
+..    | true | false | e1 <= e2 | if e1 then e2 else e3 | NaN
 
 ## Changelog
+
+Build on 02/20/18:
+### New features
+
+- Switched to an infix notation
+
+### changes
+
+-  Changed implementation to use a lexer and
+.. parser generator
+- Switched to infix notation
+
+### Known Bugs
+
+- No known bugs
+
 
 Build on 02/07/18:
 ### New features

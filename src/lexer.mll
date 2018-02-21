@@ -38,6 +38,9 @@ rule token = parse
   | ['0'-'9']+ as lxm       { INT (int_of_string lxm) }
   | '<''='                  { LESSEQ}
   | 'i''f'                  { IF }
+  | 'N''a''N'               { NAN }
+  | 't''h''e''n'            { THEN}
+  | 'e''l''s''e'            { ELSE}
   | symbol_reg              { create_symbol lexbuf }
   | eof                     { EOF }
   | _  { failwith
