@@ -11,38 +11,63 @@ open Parser
 
 exception Lexer_error of string
 
-let symbols : (string * Parser.token) list =
-  [ ("(", LPAREN)
-  ; (")", RPAREN)
-  ; ("+", PLUS)
-  ; ("-", MINUS)
-  ; ("*", TIMES)
-  ; ("/", DIV)
-  ]
+let token_from_symbol symbol =
+  match symbol with
+    |'('      -> LPAREN
+    |')'      -> RPAREN
+    |'+'      -> PLUS
+    |'-'      -> MINUS
+    |'*'      -> TIMES
+    |'/'      -> DIV
+    |'='      -> EQUAL
+    | _       -> failwith
+      (Printf.sprintf "Expecting symbol, instead found :%c"
+	 symbol)
 
-let create_symbol lexbuf =
-  let str = lexeme lexbuf in
-  List.assoc str symbols
 
+let token_from_word word =
+  match word with
+    | "if"   -> IF
+    | "NaN"  -> NAN
+    | "then" -> THEN
+    | "else" -> ELSE
+    | "let"  -> LET
+    | "in"   -> IN
+    | "fun"  -> FUN
+    | "true" -> BOOL true
+    | "false" -> BOOL false
+    | _      -> VARIABLE (word)
+
+
+  let token_from_symbols symbols =
+  match symbols with
+    | "<="   -> LESSEQ
+    | ">="   -> GREATEQ
+    | "->"   -> RARROW
+    | _      ->  failwith
+      (Printf.sprintf
+	 "Expecting symbols, instead found :%s"
+	 symbols) 
+    
 let create_int lexbuf = lexeme lexbuf |> int_of_string
 }
 
 let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
 let digit      = ['0'-'9']
-let symbol_reg = '(' | ')' | '+' | '-' | '*' | '/' | '<' | '='
-
+let single_char_symbol = '(' | ')' | '+' | '-' | '*' | '/' | '='
+let multi_char_symbol =  '-' | '<' | '=' | '>'
+let character = ['a'-'z']|['A'-'Z']
+    
 rule token = parse
-  | whitespace+ | newline+  { token lexbuf }     (* skip blanks *)
-  | digit+'.'digit* as lxm  { FLOAT (float_of_string lxm) }
-  | ['0'-'9']+ as lxm       { INT (int_of_string lxm) }
-  | '<''='                  { LESSEQ}
-  | 'i''f'                  { IF }
-  | 'N''a''N'               { NAN }
-  | 't''h''e''n'            { THEN}
-  | 'e''l''s''e'            { ELSE}
-  | symbol_reg              { create_symbol lexbuf }
-  | eof                     { EOF }
+  | whitespace+ | newline+    { token lexbuf }     (* skip blanks *)
+  | digit+'.'digit* as lxm    { FLOAT (float_of_string lxm) }
+  | ['0'-'9']+ as lxm         { INT (int_of_string lxm) }
+  | '<''='                    { LESSEQ}
+  | character+ as lxm         {token_from_word lxm }
+  | single_char_symbol as lxm { token_from_symbol lxm }      
+  | multi_char_symbol+ as lxm { token_from_symbols lxm }
+  | eof                       { EOF }
   | _  { failwith
 	   (Printf.sprintf
 	      "don't know how to handle '%s'"

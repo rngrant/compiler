@@ -4,7 +4,6 @@
 type value = VInt of int | VBool of bool | VFloat of float | VNaN
 
 
-let string_of_bool b = if b then "true" else "false"
     
 let string_of_value (v:value) : string=
   match v with
@@ -13,15 +12,19 @@ let string_of_value (v:value) : string=
     | VBool  b -> string_of_bool b
     | VFloat f -> string_of_float f
 
-type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq
+type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq
     
 type exp =
   | ENaN
-  | EInt of int
+  | EVar   of string
+  | EInt   of int
   | EFloat of float
-  | EBool of bool
-  | EBin of binOpExpression*exp * exp
-  | EIF  of exp*exp*exp
+  | EBool  of bool
+  | EBin   of binOpExpression*exp * exp
+  | EIF    of exp*exp*exp
+  | ELet   of exp*exp*exp
+  | EFun   of exp*exp
+  | EApp   of exp*exp
 
 let string_of_bin_op (op:binOpExpression) : string=
   match op with
@@ -29,7 +32,8 @@ let string_of_bin_op (op:binOpExpression) : string=
     |BSub  -> "-"
     |BMult -> "*"
     |BDiv  -> "/"      
-    |BLEq  -> "<="
+    |BLEq  -> "<="       
+    |BGEq  -> ">="
 
     
 let rec string_of_expression (e:exp): string =
@@ -46,6 +50,7 @@ let rec string_of_expression (e:exp): string =
       ^ (string_of_bin_op op) ^ " "
       ^ (string_of_expression e1)^ " "
       ^ (string_of_expression e2) ^" )"
+    
     
 let rec interpret (e:exp) : value =
   match e with
