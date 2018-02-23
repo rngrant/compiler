@@ -24,7 +24,7 @@ let filename_to_exp filename  =
 let input_handler filename parse =
   match parse with
     | true      -> filename_to_exp filename |> string_of_expression
-    | false     -> filename_to_exp filename |> Lang.interpret |> string_of_value
+    | false     -> filename_to_exp filename |> Lang.eval |> string_of_value
 
 let main () = begin
   let speclist  =

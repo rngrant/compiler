@@ -11,6 +11,7 @@
 %token LET  EQUAL IN
 %token IF THEN ELSE
 %token PLUS MINUS TIMES DIV LESSEQ GREATEQ
+%left IN  RARROW     /* lowest precedence */
 %left PLUS MINUS        /* lowest precedence */
 %left TIMES DIV         /* medium precedence */
 %left LESSEQ  GREATEQ   /* highest precedence */
@@ -36,17 +37,17 @@ expr
   : n = INT                { EInt n }
 | f = FLOAT                { EFloat f}
 | b = BOOL                 { EBool b}
-| v = VARIABLE             { EVar v }
+| v = VARIABLE             { EVar (Var( v) )}
 | NAN                      { ENaN }    
 | LPAREN  e1=expr RPAREN   { e1 }
-| e1= expr LPAREN  e2=expr RPAREN   { EApp (e1,e2) }
-| LET e1= expr EQUAL e2=expr IN e3=expr   { ELet (e1,e2,e3) }
-| FUN e1= expr RARROW e2=expr   { EFun (e1,e2) }
+| LET v= VARIABLE EQUAL e1=expr IN e2=expr   { ELet (Var (v),e1,e2) }
+| FUN v= VARIABLE RARROW e=expr   { EFun (Var(v),e) }
 | e1=expr PLUS   e2=expr   { EBin (BAdd ,e1,  e2) }
 | e1=expr MINUS  e2=expr   { EBin (BSub , e1, e2) }
 | e1=expr TIMES  e2=expr   { EBin (BMult, e1, e2) }
 | e1=expr DIV    e2=expr   { EBin (BDiv, e1, e2) }    
 | e1=expr LESSEQ e2=expr   { EBin (BLEq, e1, e2) }
-| e1=expr GREATEQ e2=expr   { EBin (BGEq, e1, e2) }
-| IF   e1=expr THEN e2=expr ELSE e3=expr  { EIF (e1, e2,e3) }
+| e1=expr GREATEQ e2=expr  { EBin (BGEq, e1, e2) }
+| IF e1=expr THEN e2=expr ELSE e3=expr  { EIF (e1, e2,e3) }    
+| e1= expr e2=expr  { EApp (e1,e2) }
 ;
