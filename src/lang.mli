@@ -1,6 +1,8 @@
 type variable = | Var of string
 
-type binOpExpression  = | BAdd | BSub | BMult| BDiv | BLEq | BGEq
+type binOpExpression  = | BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
+
+type boolOp   =  | BAnd| BOr 
     
 type exp =
   | ENaN
@@ -8,7 +10,8 @@ type exp =
   | EInt   of int
   | EFloat of float
   | EBool  of bool
-  | EBin   of binOpExpression*exp * exp
+  | EBin   of binOpExpression*exp * exp      
+  | EBinBool  of boolOp*exp * exp
   | EIF    of exp*exp*exp
   | ELet   of variable*exp*exp
   | EFun   of variable*exp

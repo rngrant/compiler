@@ -3,22 +3,25 @@
 
 type variable = Var of string
 
-type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq
+type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
 
+type boolOp   = BAnd| BOr 
+    
 type exp =
   | ENaN
-  | EVar   of variable
-  | EInt   of int
-  | EFloat of float
-  | EBool  of bool
-  | EBin   of binOpExpression*exp * exp
-  | EIF    of exp*exp*exp
-  | ELet   of variable*exp*exp
-  | EFun   of variable*exp
-  | EApp   of exp*exp
+  | EVar      of variable
+  | EInt      of int
+  | EFloat    of float
+  | EBool     of bool
+  | EBin      of binOpExpression*exp * exp
+  | EBinBool  of boolOp*exp * exp
+  | EIF       of exp*exp*exp
+  | ELet      of variable*exp*exp
+  | EFun      of variable*exp
+  | EApp      of exp*exp
 
 type value = VInt of int | VBool of bool | VFloat of float|
-    VFun of variable*exp     | VNaN
+    VFun of variable*exp | VNaN
         
 
 let string_of_bin_op (op:binOpExpression) : string=
@@ -29,6 +32,14 @@ let string_of_bin_op (op:binOpExpression) : string=
     |BDiv  -> "/"      
     |BLEq  -> "<="       
     |BGEq  -> ">="
+    |BGT   -> ">"
+    |BLT   -> "<"
+    |BEq   -> "="
+
+let string_of_bool_op (op:boolOp): string =
+  match op with
+    |BAnd  -> "and"
+    |BOr   -> "or"
 
     
 let rec string_of_expression (e:exp): string =
@@ -44,6 +55,10 @@ let rec string_of_expression (e:exp): string =
       ^ (string_of_expression e3) ^ " )"
     | EBin (op,e1,e2) -> "( "
       ^ (string_of_bin_op op) ^ " "
+      ^ (string_of_expression e1)^ " "
+      ^ (string_of_expression e2) ^" )"
+    | EBinBool (op,e1,e2) ->"( "
+      ^ (string_of_bool_op op) ^ " "
       ^ (string_of_expression e1)^ " "
       ^ (string_of_expression e2) ^" )"
     | ELet (Var vname,e1,e2) -> "( let [ " ^vname^" "
@@ -81,6 +96,9 @@ let rec subst (v :value) (var:variable) (e:exp) =
     | EBin (op,e1, e2) -> EBin (op,
 				(sub e1),
 				(sub e2))
+    | EBinBool (op,e1, e2) -> EBinBool (op,
+				(sub e1),
+				(sub e2))
     | EIF (e1,e2,e3)   -> EIF (sub e1, sub e2, sub e3)
     | ELet (var1,e1, e2) -> ELet (var1, (sub e1), (sub e2))
     | EApp ( e1 ,e2)       -> EApp (sub e1 ,sub e2)
@@ -98,7 +116,8 @@ and eval (e:exp) : value =
     | EInt   n         -> VInt n      
     | EBool  b         -> VBool b
     | EFloat f         -> VFloat f
-    | EBin (op,e1, e2) -> eval_bin_op op e1 e2
+    | EBin (op,e1, e2) -> eval_bin_op op e1 e2      
+    | EBinBool (op,e1, e2) -> eval_bool_op op e1 e2
     | EIF (e1,e2,e3)   ->
       if eval_bool e1
       then eval e2
@@ -118,6 +137,17 @@ and eval (e:exp) : value =
     | EVar (Var var1)     ->failwith
       (Printf.sprintf "Unbound variable :%s"
 	 var1)
+and eval_bool_op (op:boolOp) (e1:exp) (e2:exp)=
+  let v1 = eval e1 in
+  let v2 = eval e2 in
+  match (op,v1,v2) with
+    | (BAnd,VBool v1, VBool v2)  -> VBool (v1 && v2)
+    | (BOr,VBool v1, VBool v2)   -> VBool (v1 || v2)
+    | _ -> failwith
+      (Printf.sprintf "Was expecting a Boolean, instead found :(%s %s %s)"
+	 (string_of_bool_op op)
+	 (string_of_value v1)
+	 (string_of_value v2))
       
 and eval_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=
   let v1 = eval e1 in
@@ -146,7 +176,10 @@ and eval_bin_op_int (op:binOpExpression) (n1:int) (n2:int)=
     | BSub  -> VInt( n1 - n2)
     | BMult -> VInt( n1 * n2)
     | BLEq  -> VBool (n1 <= n2)
-    | BGEq  -> VBool (n1 >= n2)       
+    | BGEq  -> VBool (n1 >= n2)
+    | BLT  ->  VBool (n1 < n2)
+    | BGT  ->  VBool (n1 > n2)
+    | BEq ->   VBool (n1 = n2)             
     | BDiv  -> if n2 ==0 then VNaN else VInt( n1 / n2)
 
 and eval_bin_op_float  (op:binOpExpression) (f1:float) (f2:float)=
@@ -156,6 +189,9 @@ and eval_bin_op_float  (op:binOpExpression) (f1:float) (f2:float)=
     | BMult -> VFloat( f1 *. f2)
     | BLEq  -> VBool (f1 <= f2)
     | BGEq  -> VBool (f1 >= f2)
+    | BLT  ->  VBool (f1 < f2)
+    | BGT  ->  VBool (f1 > f2)
+    | BEq ->   VBool (f1 = f2)   
     | BDiv  -> if f2 ==0.0 then VNaN else VFloat( f1 /. f2)
 	
 and eval_bool (e:exp) : bool=

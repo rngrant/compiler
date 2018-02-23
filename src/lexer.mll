@@ -20,6 +20,8 @@ let token_from_symbol symbol =
     |'*'      -> TIMES
     |'/'      -> DIV
     |'='      -> EQUAL
+    |'>'      -> GTHAN
+    |'<'      -> LTHAN
     | _       -> failwith
       (Printf.sprintf "Expecting symbol, instead found :%c"
 	 symbol)
@@ -36,6 +38,8 @@ let token_from_word word =
     | "fun"  -> FUN
     | "true" -> BOOL true
     | "false" -> BOOL false
+    | "and"   -> AND
+    | "or"    -> OR
     | _      -> VARIABLE (word)
 
 
@@ -55,16 +59,16 @@ let create_int lexbuf = lexeme lexbuf |> int_of_string
 let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
 let digit      = ['0'-'9']
-let single_char_symbol = '(' | ')' | '+' | '-' | '*' | '/' | '='
+let single_char_symbol = '(' | ')' | '+' | '-' | '*' | '/' | '=' | '<' | '>'
 let multi_char_symbol =  '-' | '<' | '=' | '>'
 let character = ['a'-'z']|['A'-'Z']
+let variable_characters = character | '_'| digit
     
 rule token = parse
   | whitespace+ | newline+    { token lexbuf }     (* skip blanks *)
   | digit+'.'digit* as lxm    { FLOAT (float_of_string lxm) }
   | ['0'-'9']+ as lxm         { INT (int_of_string lxm) }
-  | '<''='                    { LESSEQ}
-  | character+ as lxm         {token_from_word lxm }
+  | variable_characters+ as lxm {token_from_word lxm }
   | single_char_symbol as lxm { token_from_symbol lxm }      
   | multi_char_symbol+ as lxm { token_from_symbols lxm }
   | eof                       { EOF }
