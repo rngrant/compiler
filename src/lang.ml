@@ -82,17 +82,8 @@ let rec subst (v :value) (var:variable) (e:exp) =
 				(sub e1),
 				(sub e2))
     | EIF (e1,e2,e3)   -> EIF (sub e1, sub e2, sub e3)
-    | ELet (var1,e1, e2) -> sub (subst (eval e1) var1 e2)
-    | EApp (EFun(var1,e2), e1)  -> sub (subst (eval e1) var1 e2)
-    | EApp ( e1 ,e2)       -> let v = sub e1 |> eval  in
-			   begin
-			   match v with
-			     | VFun (var,e3) ->  sub (subst (eval e3) var e2)
-			     | _ -> failwith
-			       (Printf.sprintf "Was expecting a function, instead found :%s %s"
-				  (string_of_expression e1)
-				  (string_of_expression e2))
-			   end
+    | ELet (var1,e1, e2) -> ELet (var1, (sub e1), (sub e2))
+    | EApp ( e1 ,e2)       -> EApp (sub e1 ,sub e2)
     | EVar (Var var1)     -> if var1 = varname
       then (val_to_exp v)
       else EVar (Var var1)

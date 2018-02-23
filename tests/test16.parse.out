@@ -1,0 +1,1 @@
+( let [ max ( fun ( x ) ( fun ( y ) ( if ( >= x y ) x y ) ) ) ] ( let [ a 5 ] ( let [ b 2 ] ( ( max a ) b ) ) ) )
