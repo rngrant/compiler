@@ -5,7 +5,7 @@
 %token <float> FLOAT
 %token <bool> BOOL
 %token <string> VARIABLE
-
+%token FIX
 %token NAN
 %token FUN RARROW
 %token LPAREN RPAREN
@@ -13,10 +13,11 @@
 %token IF THEN ELSE
 %token AND OR
 %token PLUS MINUS TIMES DIV LESSEQ GREATEQ GTHAN LTHAN
+%left AND OR
 %left IN  RARROW     /* lowest precedence */
 %left PLUS MINUS        /* lowest precedence */
 %left TIMES DIV         /* medium precedence */
-%left LESSEQ  GREATEQ   /* highest precedence */
+%left LESSEQ  GREATEQ  GTHAN LTHAN   /* highest precedence */
 %start main             /* the entry point */
 %token EOF
 
@@ -43,6 +44,7 @@ expr
 | NAN                      { ENaN }    
 | LPAREN  e1=expr RPAREN   { e1 }
 | LET v= VARIABLE EQUAL e1=expr IN e2=expr   { ELet (Var (v),e1,e2) }
+| FIX v1= VARIABLE  v2 = VARIABLE  RARROW  e=expr  {EFix (Var (v1), Var(v2), e)}
 | FUN v= VARIABLE RARROW e=expr   { EFun (Var(v),e) }
 | e1=expr PLUS   e2=expr   { EBin (BAdd ,e1,  e2) }
 | e1=expr MINUS  e2=expr   { EBin (BSub , e1, e2) }

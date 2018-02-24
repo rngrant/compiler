@@ -36,6 +36,7 @@ let token_from_word word =
     | "let"  -> LET
     | "in"   -> IN
     | "fun"  -> FUN
+    | "fix"  -> FIX
     | "true" -> BOOL true
     | "false" -> BOOL false
     | "and"   -> AND

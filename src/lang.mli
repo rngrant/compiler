@@ -15,11 +15,12 @@ type exp =
   | EIF    of exp*exp*exp
   | ELet   of variable*exp*exp
   | EFun   of variable*exp
+  | EFix   of variable*variable*exp
   | EApp   of exp*exp
 
 
 type value =  | VInt of int | VBool of bool | VFloat of float|
-    VFun of variable*exp     | VNaN
+    VFun of variable*exp | VFix of variable*variable*exp  | VNaN
 
 
 val string_of_expression: exp -> string
