@@ -1,3 +1,11 @@
-numTest=16
-./run_out_test.sh $numTest
-./run_parse_test.sh $numTest
+numTest=21
+
+for i in `seq 1 $numTest`;
+do
+#    echo $i
+    ./compiler.native "tests/test"$i".arith" > tmp.txt~
+    diff tmp.txt~ "tests/test"$i".out"
+    ./compiler.native -parse "tests/test"$i".arith" > tmp.txt~
+    diff tmp.txt~ "tests/test"$i".parse.out"
+done    
+
