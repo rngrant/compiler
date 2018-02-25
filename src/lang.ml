@@ -102,6 +102,10 @@ let exp_to_value e =
       (Printf.sprintf "Expected value instead found : %s"
 	 (string_of_expression e))
 
+let is_value (e:exp) =
+  match e with
+    | ENaN |EInt _ | EBool _ | EFloat _ | EFun _| EFix _ -> true
+    | _ -> false      
 
       
 let rec subst (v :value) (var:variable) (e:exp) =
@@ -131,35 +135,10 @@ let rec subst (v :value) (var:variable) (e:exp) =
 	
     
 let rec eval (e:exp) : value =
-  match e with
-    | ENaN             -> VNaN
-    | EInt   n         -> VInt n      
-    | EBool  b         -> VBool b
-    | EFloat f         -> VFloat f
-    | EBin (op,e1, e2) -> eval_bin_op op e1 e2      
-    | EBinBool (op,e1, e2) -> eval_bool_op op e1 e2
-    | EIF (e1,e2,e3)   ->
-      if eval_bool e1
-      then eval e2
-      else eval e3
-    | EFun (var,e)        -> VFun (var,e)
-    | EFix (var1,var2,e)  -> VFix (var1,var2,e)
-    | ELet (var, e1,e2)   -> eval (subst (eval e1) var e2)
-    | EApp (e1 , e2)    -> let v = eval e1 in
-			   begin
-			   match v with
-			     | VFun (var,e3) -> eval (subst (eval e2) var e3)
-			     | VFix (var1,var2,e3) as vF ->
-			       eval (subst vF var1 (subst (eval e2) var2 e3))
-			     | _ -> failwith
-			       (Printf.sprintf "Was expecting a function, instead found :%s %s"
-				  (string_of_expression e1)
-				  (string_of_expression e2))
-			   end
-    | EVar (Var var1)     ->failwith
-      (Printf.sprintf "Unbound variable :%s"
-	 var1)
-
+    if (is_value e)
+    then exp_to_value e
+    else step e |> eval
+      
 and eval_bool_op (op:boolOp) (e1:exp) (e2:exp)=
   let v1 = eval e1 in
   let v2 = eval e2 in
@@ -226,13 +205,7 @@ and eval_bool (e:exp) : bool=
 			(string_of_value v) (string_of_expression e))
 
 
-let is_value (e:exp) =
-  match e with
-    | ENaN |EInt _ | EBool _ | EFloat _ | EFun _| EFix _ -> true
-    | _ -> false
-      
-
-let rec step (e:exp) =
+and step (e:exp) =
   match e with
     | ENaN             -> ENaN
     | EInt   n         -> EInt n      
