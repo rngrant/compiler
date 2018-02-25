@@ -46,6 +46,10 @@ enabled.
 
 You can also run tests using make test, or running the run_test.sh script
 
+## Flags
+We currently support the -parse flag, which will display the
+result of parsing the code in lisp syntax, and the -step flag
+with will evaluate the code incrementally untill a value is reached
 
 ## Language description
 This project currently supports evaluation of a
@@ -57,6 +61,23 @@ e ::= n | f | (e) | e1 + e2 | e1 - e2 | e1 * e2 | e1 /e2
 ..    | let x = e1 in e2 | fun x -> e | fix x y -> e| e1 e2
 
 ## Changelog
+
+Build on 02/25/18:
+### New features
+
+- Added flag to the compiler that allows incremental evaluation
+
+
+### changes
+
+- Implemented above feature
+- Changed evaluation to use the step by step evalution
+
+### Known Bugs
+
+- Do not support nested variables with the same name
+
+
 
 Build on 02/23/18:
 ### New features
@@ -79,7 +100,7 @@ Build on 02/23/18:
 
 ### Known Bugs
 
-- No known bugs
+- Do not support nested variables with the same name
 
 
 

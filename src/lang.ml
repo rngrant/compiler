@@ -204,7 +204,6 @@ and eval_bool (e:exp) : bool=
 			"Type error, was expecting bool instead got: %s from %s"
 			(string_of_value v) (string_of_expression e))
 
-
 and step (e:exp) =
   match e with
     | ENaN             -> ENaN
@@ -232,7 +231,6 @@ and step_bin_op op e1 e2 =
     end
   else EBin (op,step e1, e2)
       
-
 and step_bool_op op e1 e2 =
   if is_value e1 then
     begin
@@ -240,7 +238,6 @@ and step_bool_op op e1 e2 =
       else EBinBool (op, e1, step e2)
     end
   else EBinBool (op,step e1, e2)
-
 
 and step_if e1 e2 e3 =
   if is_value e1 then
