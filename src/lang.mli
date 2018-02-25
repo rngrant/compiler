@@ -22,9 +22,15 @@ type exp =
 type value =  | VInt of int | VBool of bool | VFloat of float|
     VFun of variable*exp | VFix of variable*variable*exp  | VNaN
 
-
+	
 val string_of_expression: exp -> string
 
 val eval: exp -> value
 
 val string_of_value: value -> string
+
+val is_value : exp -> bool
+
+val exp_to_value : exp -> value
+
+val step : exp -> exp

@@ -80,9 +80,8 @@ let string_of_value (v:value) : string=
     | VFloat f -> string_of_float f
     | VFun (Var vname,e) -> "fun "^ vname^" ->" ^ string_of_expression e
     | VFix (Var vname1,Var vname2,e) -> "fix "^ vname1^" "^vname2^" ->" ^ string_of_expression e
-      
-let rec subst (v :value) (var:variable) (e:exp) =
-  let val_to_exp v =
+
+let val_to_exp v =
     match v with     
     | VNaN     -> ENaN
     | VInt   n -> EInt n
@@ -90,7 +89,22 @@ let rec subst (v :value) (var:variable) (e:exp) =
     | VFloat f -> EFloat f
     | VFun (v,e) -> EFun (v,e)
     | VFix(v1,v2,e) -> EFix(v1,v2,e)
-  in
+
+let exp_to_value e =
+    match e with     
+    | ENaN     -> VNaN
+    | EInt   n -> VInt n
+    | EBool  b -> VBool b
+    | EFloat f -> VFloat f
+    | EFun (v,e) -> VFun (v,e)
+    | EFix(v1,v2,e) -> VFix(v1,v2,e)
+    | _             ->failwith
+      (Printf.sprintf "Expected value instead found : %s"
+	 (string_of_expression e))
+
+
+      
+let rec subst (v :value) (var:variable) (e:exp) =
   let sub = subst v var in
   let (Var varname) = var in
   match e with
@@ -116,7 +130,7 @@ let rec subst (v :value) (var:variable) (e:exp) =
     | EFix(var1,var2,e) -> EFix(var1,var2,e)
 	
     
-and eval (e:exp) : value =
+let rec eval (e:exp) : value =
   match e with
     | ENaN             -> VNaN
     | EInt   n         -> VInt n      
@@ -135,7 +149,8 @@ and eval (e:exp) : value =
 			   begin
 			   match v with
 			     | VFun (var,e3) -> eval (subst (eval e2) var e3)
-			     |  VFix (var1,var2,e3) as vF -> eval (subst vF var1 (subst (eval e2) var2 e3))
+			     | VFix (var1,var2,e3) as vF ->
+			       eval (subst vF var1 (subst (eval e2) var2 e3))
 			     | _ -> failwith
 			       (Printf.sprintf "Was expecting a function, instead found :%s %s"
 				  (string_of_expression e1)
@@ -209,3 +224,81 @@ and eval_bool (e:exp) : bool=
     |  _ -> failwith (Printf.sprintf
 			"Type error, was expecting bool instead got: %s from %s"
 			(string_of_value v) (string_of_expression e))
+
+
+let is_value (e:exp) =
+  match e with
+    | ENaN |EInt _ | EBool _ | EFloat _ | EFun _| EFix _ -> true
+    | _ -> false
+      
+
+let rec step (e:exp) =
+  match e with
+    | ENaN             -> ENaN
+    | EInt   n         -> EInt n      
+    | EBool  b         -> EBool b
+    | EFloat f         -> EFloat f
+    | EFun (var,e)        -> EFun (var,e)
+    | EFix (var1,var2,e)  -> EFix (var1,var2,e)
+    | EBin (op,e1, e2) -> step_bin_op op e1 e2      
+    | EBinBool (op,e1, e2) -> step_bool_op op e1 e2
+    | EIF (e1,e2,e3)   -> step_if e1 e2 e3
+    | ELet (var, e1,e2) -> if is_value e1
+      then subst (exp_to_value e1) var e2
+      else  ELet (var,step e1,e2)
+    | EApp (e1 , e2)    -> step_app e1 e2
+    | EVar (Var var1)     ->failwith
+      (Printf.sprintf "Unbound variable :%s"
+	 var1)
+
+and step_bin_op op e1 e2 =
+  if is_value e1 then
+    begin
+      if is_value e2 then val_to_exp (eval_bin_op op e1 e2)
+      else EBin (op, e1, step e2)
+    end
+  else EBin (op,step e1, e2)
+      
+
+and step_bool_op op e1 e2 =
+  if is_value e1 then
+    begin
+      if is_value e2 then val_to_exp (eval_bool_op op e1 e2)
+      else EBinBool (op, e1, step e2)
+    end
+  else EBinBool (op,step e1, e2)
+
+
+and step_if e1 e2 e3 =
+  if is_value e1 then
+    let v = exp_to_value e1
+    in
+    begin
+      match v with
+	| VBool true -> e2
+	| VBool false -> e3
+	|  _ -> failwith
+	  (Printf.sprintf
+	     "Type error, was expecting bool instead got: %s from %s"
+	     (string_of_value v) (string_of_expression e1))
+    end
+  else EIF (step e1,e2,e3)
+
+and step_app e1 e2 =
+  if is_value e1 then
+    if is_value e2 then
+      begin
+      match e1 with
+	| EFun (var,e3) -> subst (exp_to_value e2) var e3
+	| EFix (var1,var2,e3) as vF ->
+	  subst (exp_to_value vF) var1 (subst (exp_to_value e2) var2 e3)
+	| _ -> failwith
+	  (Printf.sprintf "Was expecting a function, instead found :%s %s"
+	     (string_of_expression e1)
+	     (string_of_expression e2))
+      end
+    else  EApp ( e1, step e2)
+  else
+    EApp ( step e1, e2)
+
+  
