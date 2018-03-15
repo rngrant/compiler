@@ -44,7 +44,7 @@ let token_from_word word =
     | "and"   -> AND
     | "or"    -> OR
     | "fst"   -> FST
-    | "snd"   -> SND
+    | "snd"   -> SND      
     | "int"   -> TINT
     | "float" -> TFLOAT
     | "bool"  -> TBOOL
@@ -70,7 +70,7 @@ let whitespace = ['\t' ' ']
 let digit      = ['0'-'9']
 let single_char_symbol =
   '(' | ')' | ':'| '+' | '-' | '/' | '=' |'*'|','| '<' | '>'
-let multi_char_symbol =  '-' | '<' | '=' | '>'
+let multi_char_symbol =  '-' | '<' | '=' | '>' | '['|']'
 let character = ['a'-'z']|['A'-'Z']
 let variable_characters = character | '_'| digit
     

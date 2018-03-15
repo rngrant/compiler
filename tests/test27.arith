@@ -1,0 +1,8 @@
+let maxPair: int * int -> int =
+    fun (p: int * int) : int =
+    	if fst p > snd p then
+	fst p
+	else
+	snd p
+in maxPair ( 2 , 7)
+	

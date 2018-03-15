@@ -97,13 +97,16 @@ expLit
 | b = BOOL                 { EBool b}
 | v = VARIABLE             { EVar (Var( v) )}
 | NAN                      { ENaN }
-| UNIT                      { EUnit }    
+| UNIT                      { EUnit }
+| LPAREN RPAREN             { EUnit }    
 ;
 
 ttype
   : TINT                     { TInt }
 | TFLOAT                     { TFloat}
 | TBOOL                      { TBool}
+| LPAREN RPAREN              { TUnit}
+| NAN                        { TNaN}
 | t1=ttype RARROW t2 = ttype  { TArrow(t1,t2)}
 | t1=ttype TIMES t2 = ttype  { TPair(t1,t2)}
 ;

@@ -112,7 +112,7 @@ let string_of_value (v:value) : string=
 let rec string_of_type (t:typ) : string=
   match t with
     | TNaN         -> "NaN"
-    | TUnit        -> "()"
+    | TUnit        -> "unit"
     | TInt         -> "int"
     | TFloat       -> "float"
     | TBool        -> "bool"
@@ -130,17 +130,19 @@ let val_to_exp v =
       | VFun (t1,t2,v,e) -> EFun (t1,t2,v,e)
       | VFix(t1,t2,v1,v2,e) -> EFix(t1,t2,v1,v2,e)
 
-let exp_to_value e =
+let rec exp_to_value e =
     match e with     
-    | ENaN     -> VNaN
-    | EInt   n -> VInt n
-    | EBool  b -> VBool b
-    | EFloat f -> VFloat f
-    | EFun (t1,t2,v,e) -> VFun (t1,t2,v,e)
-    | EFix(t1,t2,v1,v2,e) -> VFix(t1,t2,v1,v2,e)
-    | _             ->failwith
-      (Printf.sprintf "Expected value instead found : %s"
-	 (string_of_expression e))
+      | ENaN     -> VNaN
+      | EUnit    -> VUnit
+      | EInt   n -> VInt n
+      | EBool  b -> VBool b
+      | EFloat f -> VFloat f
+      | EPair (e1,e2) -> VPair (e1,e2)
+      | EFun (t1,t2,v,e) -> VFun (t1,t2,v,e)
+      | EFix(t1,t2,v1,v2,e) -> VFix(t1,t2,v1,v2,e)
+      | _             ->failwith
+	(Printf.sprintf "Expected value instead found : %s"
+	   (string_of_expression e))
 
 let rec is_value (e:exp) =
   match e with
