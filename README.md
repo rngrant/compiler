@@ -48,8 +48,9 @@ You can also run tests using make test, or running the run_test.sh script
 
 ## Flags
 We currently support the -parse flag, which will display the
-result of parsing the code in lisp syntax, and the -step flag
-with will evaluate the code incrementally untill a value is reached
+result of parsing the code in lisp syntax,  the -step flag
+which will evaluate the code incrementally until a value is reached,
+and the -typecheck flag which evaluates the type of the program.
 
 ## Language description
 This project currently supports evaluation of a
@@ -61,6 +62,28 @@ e ::= n | f | (e) | e1 + e2 | e1 - e2 | e1 * e2 | e1 /e2
 ..    | let x = e1 in e2 | fun x -> e | fix x y -> e| e1 e2
 
 ## Changelog
+
+Build on 03/15/18:
+### New features
+
+- Implemented Typechecking
+- Added Pairs, Lists, and the Unit type
+- Added fst, snd for getting the first and second element of a pair
+- Added hd and tl for getting the first element of a list, and getting
+.. all but the first element of the list
+- Added empty for checking a list to see if it is empty
+
+
+### changes
+
+- Implemented above features
+- 
+
+### Known Bugs
+
+- Do not support nested variables with the same name
+- Does not currently support currying
+
 
 Build on 02/25/18:
 ### New features
