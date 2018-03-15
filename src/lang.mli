@@ -1,9 +1,12 @@
 
-type typ     = | TNaN| TInt | TFloat| TBool | TArrow of typ*typ
+type typ     = | TNaN| TInt | TFloat| TBool | TUnit
+	       | TArrow of typ*typ|TPair of typ*typ
     
 type variable = | Var of string
 
 type ctx  = (variable*typ) list
+
+type uniOpExpression  = | UFst| USnd
     
 type binOpExpression  = | BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
 
@@ -12,10 +15,13 @@ type boolOp   =  | BAnd| BOr
     
 type exp =
   | ENaN
+  | EUnit
   | EVar   of variable
   | EInt   of int
   | EFloat of float
   | EBool  of bool
+  | EPair     of exp*exp
+  | EUni      of uniOpExpression*exp
   | EBin   of binOpExpression*exp * exp      
   | EBinBool  of boolOp*exp * exp
   | EIF    of exp*exp*exp
@@ -26,7 +32,8 @@ type exp =
 
 
 type value =  | VInt of int | VBool of bool | VFloat of float|
-    VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp |VNaN
+    VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp
+	      |VNaN | VUnit | VPair of exp*exp
         
 	
 val string_of_expression: exp -> string

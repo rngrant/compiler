@@ -7,8 +7,9 @@
 %token <string> VARIABLE
 %token TINT TFLOAT TBOOL
 %token FIX
-%token COLON
-%token NAN
+%token COLON COMMA
+%token FST SND
+%token NAN UNIT
 %token FUN RARROW
 %token LPAREN RPAREN
 %token LET  EQUAL IN
@@ -22,7 +23,7 @@
 %left IN       /* lowest precedence */
 %left PLUS MINUS        /* lowest precedence */
 %left TIMES DIV         /* medium precedence */
-%left LESSEQ  GREATEQ  GTHAN LTHAN   /* highest precedence */
+%left LESSEQ  GREATEQ  GTHAN LTHAN FST SND  /* highest precedence */
 
 %start main             /* the entry point */
 %token EOF
@@ -52,6 +53,9 @@ expr
     {EFix (t1,t2,Var (v1), Var(v2), e)}
 | FUN LPAREN v=VARIABLE COLON t1=ttype RPAREN COLON t2=ttype EQUAL e=expr
     { EFun (t1,t2,Var(v),e) }
+| LPAREN  e1=expr COMMA e2=expr RPAREN   { EPair(e1,e2) }
+| FST e=expr               { EUni (UFst, e)}
+| SND e=expr               { EUni (USnd, e)}
 | e1=expr PLUS   e2=expr   { EBin (BAdd ,e1,  e2) }
 | e1=expr MINUS  e2=expr   { EBin (BSub , e1, e2) }
 | e1=expr TIMES  e2=expr   { EBin (BMult, e1, e2) }
@@ -92,7 +96,8 @@ expLit
 | f = FLOAT                { EFloat f}
 | b = BOOL                 { EBool b}
 | v = VARIABLE             { EVar (Var( v) )}
-| NAN                      { ENaN }    
+| NAN                      { ENaN }
+| UNIT                      { EUnit }    
 ;
 
 ttype
@@ -100,5 +105,6 @@ ttype
 | TFLOAT                     { TFloat}
 | TBOOL                      { TBool}
 | t1=ttype RARROW t2 = ttype  { TArrow(t1,t2)}
+| t1=ttype TIMES t2 = ttype  { TPair(t1,t2)}
 ;
 

@@ -22,6 +22,7 @@ let token_from_symbol symbol =
     |'='      -> EQUAL
     |'>'      -> GTHAN
     | ':'     -> COLON
+    | ','     -> COMMA
     |'<'      -> LTHAN
     | _       -> failwith
       (Printf.sprintf "Expecting symbol, instead found :%c"
@@ -42,6 +43,8 @@ let token_from_word word =
     | "false" -> BOOL false
     | "and"   -> AND
     | "or"    -> OR
+    | "fst"   -> FST
+    | "snd"   -> SND
     | "int"   -> TINT
     | "float" -> TFLOAT
     | "bool"  -> TBOOL
@@ -53,6 +56,7 @@ let token_from_word word =
     | "<="   -> LESSEQ
     | ">="   -> GREATEQ
     | "->"   -> RARROW
+    | "()"   -> UNIT
     | _      ->  failwith
       (Printf.sprintf
 	 "Expecting symbols, instead found :%s"
@@ -64,7 +68,8 @@ let create_int lexbuf = lexeme lexbuf |> int_of_string
 let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
 let digit      = ['0'-'9']
-let single_char_symbol = '(' | ')' | ':'| '+' | '-' | '*' | '/' | '=' | '<' | '>'
+let single_char_symbol =
+  '(' | ')' | ':'| '+' | '-' | '/' | '=' |'*'|','| '<' | '>'
 let multi_char_symbol =  '-' | '<' | '=' | '>'
 let character = ['a'-'z']|['A'-'Z']
 let variable_characters = character | '_'| digit

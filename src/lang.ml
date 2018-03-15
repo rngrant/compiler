@@ -1,11 +1,14 @@
 (*Starter code for this exercise copied from
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lang.ml *)
 
-type typ  = TNaN| TInt | TFloat| TBool | TArrow of typ*typ
+type typ  = TNaN| TInt | TFloat| TBool | TUnit
+	    |TArrow of typ*typ |TPair of typ*typ
 
 type variable = Var of string
 
 type ctx   =  (variable*typ) list
+
+type uniOpExpression  = UFst| USnd
     
 type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
 
@@ -13,10 +16,13 @@ type boolOp   = BAnd| BOr
 
 type exp =
   | ENaN
+  | EUnit
   | EVar      of variable
   | EInt      of int
   | EFloat    of float
   | EBool     of bool
+  | EPair     of exp*exp
+  | EUni      of uniOpExpression*exp
   | EBin      of binOpExpression*exp * exp
   | EBinBool  of boolOp*exp * exp
   | EIF       of exp*exp*exp
@@ -26,9 +32,15 @@ type exp =
   | EApp      of exp*exp
 
 type value = VInt of int | VBool of bool | VFloat of float|
-    VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp |VNaN
+    VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp
+	     |VNaN | VUnit | VPair of exp*exp
         
 
+let string_of_uni_op (op:uniOpExpression) : string=
+  match op with
+    |UFst  -> "fst"
+    |USnd  -> "snd"
+	
 let string_of_bin_op (op:binOpExpression) : string=
   match op with
     |BAdd  -> "+"
@@ -50,10 +62,14 @@ let string_of_bool_op (op:boolOp): string =
 let rec string_of_expression (e:exp): string =
   match e with
     | ENaN     -> "NaN"
+    | EUnit    -> "()"
     | EVar (Var vname) -> vname
     | EInt  n  -> string_of_int  n
     | EBool b  -> string_of_bool b
     | EFloat f -> string_of_float f
+    | EPair (e1,e2) -> "( pair "
+      ^(string_of_expression e1) ^" "
+      ^(string_of_expression e2)^ " )"
     | EIF (e1,e2,e3)  -> "( if "
       ^(string_of_expression e1) ^" "
       ^(string_of_expression e2)^ " "
@@ -62,6 +78,9 @@ let rec string_of_expression (e:exp): string =
       ^ (string_of_bin_op op) ^ " "
       ^ (string_of_expression e1)^ " "
       ^ (string_of_expression e2) ^" )"
+    | EUni (op,e)    -> "( "
+      ^ (string_of_uni_op op) ^" "
+      ^ (string_of_expression e)^" )"
     | EBinBool (op,e1,e2) ->"( "
       ^ (string_of_bool_op op) ^ " "
       ^ (string_of_expression e1)^ " "
@@ -79,9 +98,13 @@ let rec string_of_expression (e:exp): string =
 let string_of_value (v:value) : string=
   match v with
     | VNaN     -> "NaN"
+    | VUnit    -> "()"
     | VInt   n -> string_of_int n
     | VBool  b -> string_of_bool b
     | VFloat f -> string_of_float f
+    | VPair (e1,e2) -> "( "
+      ^(string_of_expression e1)^" , "
+      ^(string_of_expression e2)^" )"
     | VFun (_,_,Var vname,e) -> "fun "^ vname^" ->" ^ string_of_expression e
     | VFix (_,_,Var vname1,Var vname2,e) ->
       "fix "^ vname1^" "^vname2^" ->" ^ string_of_expression e
@@ -89,19 +112,23 @@ let string_of_value (v:value) : string=
 let rec string_of_type (t:typ) : string=
   match t with
     | TNaN         -> "NaN"
+    | TUnit        -> "()"
     | TInt         -> "int"
     | TFloat       -> "float"
     | TBool        -> "bool"
+    | TPair (t1,t2) -> (string_of_type t1) ^ " * " ^ (string_of_type t2)
     | TArrow (t1,t2) -> (string_of_type t1) ^ "->" ^ (string_of_type t2)
 
 let val_to_exp v =
     match v with     
-    | VNaN     -> ENaN
-    | VInt   n -> EInt n
-    | VBool  b -> EBool b
-    | VFloat f -> EFloat f
-    | VFun (t1,t2,v,e) -> EFun (t1,t2,v,e)
-    | VFix(t1,t2,v1,v2,e) -> EFix(t1,t2,v1,v2,e)
+      | VNaN     -> ENaN
+      | VUnit    -> EUnit
+      | VInt   n -> EInt n
+      | VBool  b -> EBool b
+      | VFloat f -> EFloat f
+      | VPair (e1,e2) -> EPair (e1,e2)
+      | VFun (t1,t2,v,e) -> EFun (t1,t2,v,e)
+      | VFix(t1,t2,v1,v2,e) -> EFix(t1,t2,v1,v2,e)
 
 let exp_to_value e =
     match e with     
@@ -115,9 +142,10 @@ let exp_to_value e =
       (Printf.sprintf "Expected value instead found : %s"
 	 (string_of_expression e))
 
-let is_value (e:exp) =
+let rec is_value (e:exp) =
   match e with
-    | ENaN |EInt _ | EBool _ | EFloat _ | EFun _| EFix _ -> true
+    | ENaN |EUnit |EInt _ | EBool _ | EFloat _ | EFun _| EFix _ -> true
+    |  EPair (e1,e2) -> is_value e1 && is_value e2
     | _ -> false      
 
       
@@ -126,9 +154,12 @@ let rec subst (v :value) (var:variable) (e:exp) =
   let (Var varname) = var in
   match e with
     | ENaN             -> ENaN
+    | EUnit            -> EUnit
     | EInt   n         -> EInt n      
     | EBool  b         -> EBool b
     | EFloat f         -> EFloat f
+    | EPair (e1,e2)    -> EPair(sub e1, sub e2)
+    | EUni (op,e)      -> EUni (op, sub e)
     | EBin (op,e1, e2) -> EBin (op,
 				(sub e1),
 				(sub e2))
@@ -167,6 +198,16 @@ and eval_bool_op (op:boolOp) (e1:exp) (e2:exp)=
 	 (string_of_bool_op op)
 	 (string_of_value v1)
 	 (string_of_value v2))
+
+and eval_uni_op (op:uniOpExpression) (e:exp) =
+  let v = eval e in
+  match (op,v) with
+    | (UFst, VPair (v1,v2)) -> eval v1
+    | (USnd, VPair (v1,v2)) -> eval v2
+    | (UFst,_) | (USnd,_) -> failwith
+      (Printf.sprintf "Was expecting Pair, instead found :(%s %s)"
+	 (string_of_uni_op op)
+	 (string_of_value v))
       
 and eval_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=
   let v1 = eval e1 in
@@ -221,14 +262,17 @@ and eval_bool (e:exp) : bool=
 			"Type error, was expecting bool instead got: %s from %s"
 			(string_of_value v) (string_of_expression e))
 
-and step (e:exp) =
+and step (e:exp) : exp =
   match e with
     | ENaN             -> ENaN
+    | EUnit            -> EUnit
     | EInt   n         -> EInt n      
     | EBool  b         -> EBool b
     | EFloat f         -> EFloat f
+    | EPair (e1,e2)    -> step_pair e1 e2
     | EFun (t1,t2,var,e)        -> EFun (t1,t2,var,e)
     | EFix (t1,t2,var1,var2,e)  -> EFix (t1,t2,var1,var2,e)
+    | EUni (op,e)      -> step_uni_op op e
     | EBin (op,e1, e2) -> step_bin_op op e1 e2      
     | EBinBool (op,e1, e2) -> step_bool_op op e1 e2
     | EIF (e1,e2,e3)   -> step_if e1 e2 e3
@@ -240,6 +284,19 @@ and step (e:exp) =
       (Printf.sprintf "Unbound variable :%s"
 	 var1)
 
+and step_pair e1 e2 =
+  if is_value e1 then
+    begin
+      if is_value e2 then EPair (e1,e2)
+      else EPair(e1,step e2)
+    end
+  else EPair(step e1,e2)
+
+and step_uni_op op e =
+  if is_value e then
+    val_to_exp (eval_uni_op op e)
+  else EUni (op, step e)
+    
 and step_bin_op op e1 e2 =
   if is_value e1 then
     begin
@@ -293,11 +350,14 @@ let rec typecheck (c:ctx) (e:exp) : typ =
   let check_context v c = List.assoc v c 
   in
   match e with
-    | ENaN   -> TInt
+    | ENaN   -> TNaN
+    | EUnit   -> TUnit
     | EVar v ->  check_context v c
     | EInt _ -> TInt
     | EFloat _ -> TFloat
     | EBool _  -> TBool
+    | EPair(e1,e2) -> TPair(typecheck c e1,typecheck c e2)
+    | EUni  (op,e) -> typecheck_uni_op c op e
     | EBin  (op,e1, e2) -> typecheck_bin_op c op e1 e2 
     | EBinBool (op,e1, e2) -> typecheck_bool_op c op e1 e2 
     | EIF (e1,e2,e3)      -> typecheck_if c e1 e2 e3     
@@ -333,6 +393,17 @@ let rec typecheck (c:ctx) (e:exp) : typ =
 	     (string_of_expression e))
     | EApp (e1,e2) -> typecheck_app c e1 e2
 
+and typecheck_uni_op (c:ctx) (op:uniOpExpression) (e:exp) : typ =
+  let t = typecheck c e in
+  match (op,t) with
+    | (UFst, TPair (t1,t2)) -> t1
+    | (USnd, TPair (t1,t2)) -> t2
+    | (UFst, _)| (USnd, _) -> failwith
+       (Printf.sprintf "%s must be applied to a pair, instead found : %s in\n %s"
+	  (string_of_uni_op op)
+	  (string_of_type t)
+	  (string_of_expression e))
+      
 and typecheck_bin_op (c:ctx) (op:binOpExpression) (e1:exp) (e2:exp) : typ =
   let t1 = typecheck c e1 in
   let t2 = typecheck c e2 in
