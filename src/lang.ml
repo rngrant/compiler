@@ -1,15 +1,16 @@
 (*Starter code for this exercise copied from
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lang.ml *)
 
-type typ     = TInt | TFloat| TBool | TArrow of typ*typ
+type typ  = TNaN| TInt | TFloat| TBool | TArrow of typ*typ
 
 type variable = Var of string
 
+type ctx   =  (variable*typ) list
+    
 type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
 
 type boolOp   = BAnd| BOr
 
-    
 type exp =
   | ENaN
   | EVar      of variable
@@ -82,7 +83,16 @@ let string_of_value (v:value) : string=
     | VBool  b -> string_of_bool b
     | VFloat f -> string_of_float f
     | VFun (_,_,Var vname,e) -> "fun "^ vname^" ->" ^ string_of_expression e
-    | VFix (_,_,Var vname1,Var vname2,e) -> "fix "^ vname1^" "^vname2^" ->" ^ string_of_expression e
+    | VFix (_,_,Var vname1,Var vname2,e) ->
+      "fix "^ vname1^" "^vname2^" ->" ^ string_of_expression e
+
+let rec string_of_type (t:typ) : string=
+  match t with
+    | TNaN         -> "NaN"
+    | TInt         -> "int"
+    | TFloat       -> "float"
+    | TBool        -> "bool"
+    | TArrow (t1,t2) -> (string_of_type t1) ^ "->" ^ (string_of_type t2)
 
 let val_to_exp v =
     match v with     
@@ -279,3 +289,113 @@ and step_app e1 e2 =
     EApp ( step e1, e2)
 
   
+let rec typecheck (c:ctx) (e:exp) : typ =
+  let check_context v c = List.assoc v c 
+  in
+  match e with
+    | ENaN   -> TInt
+    | EVar v ->  check_context v c
+    | EInt _ -> TInt
+    | EFloat _ -> TFloat
+    | EBool _  -> TBool
+    | EBin  (op,e1, e2) -> typecheck_bin_op c op e1 e2 
+    | EBinBool (op,e1, e2) -> typecheck_bool_op c op e1 e2 
+    | EIF (e1,e2,e3)      -> typecheck_if c e1 e2 e3     
+    | ELet (expected_t,var, e1,e2) ->
+      let actual_t= typecheck c e1 in
+      if expected_t = actual_t then
+	typecheck ((var,actual_t)::c) e2
+      else failwith
+	(Printf.sprintf "Was expecting a : %s, instead found : %s in\n %s"
+	     (string_of_type expected_t)
+	     (string_of_type actual_t)
+	     (string_of_expression e2))
+    | EFun (var_t,expected_t,var, e) ->
+      let actual_t = typecheck ((var,var_t)::c) e
+      in
+      if expected_t = actual_t then
+	TArrow (var_t, actual_t)
+      else failwith
+	(Printf.sprintf "Was expecting a : %s, instead found : %s in\n %s"
+	     (string_of_type expected_t)
+	     (string_of_type actual_t)
+	     (string_of_expression e))
+    | EFix (var_t,expected_t,var1,var2,e)  ->
+      let actual_t=
+	typecheck ((var1,(TArrow (var_t,expected_t)))::((var2,var_t)::c)) e
+      in
+      if expected_t = actual_t then
+	TArrow (var_t, actual_t)
+      else failwith
+	(Printf.sprintf "Was expecting a : %s, instead found : %s in\n %s"
+	     (string_of_type expected_t)
+	     (string_of_type actual_t)
+	     (string_of_expression e))
+    | EApp (e1,e2) -> typecheck_app c e1 e2
+
+and typecheck_bin_op (c:ctx) (op:binOpExpression) (e1:exp) (e2:exp) : typ =
+  let t1 = typecheck c e1 in
+  let t2 = typecheck c e2 in
+  let ret_typ = begin
+    match op with
+      | BAdd | BSub | BMult| BDiv -> t1
+      | BLEq | BGEq | BGT| BLT| BEq -> TBool
+  end
+  in
+  match (t1, t2) with
+    | (TInt, TInt)     -> ret_typ
+    | (TFloat, TFloat) -> ret_typ
+    | (TNaN,_) | (_,TNaN) -> if ret_typ =TBool then TBool else TNaN
+    | _ -> failwith
+      (Printf.sprintf
+	 "Was expecting compatible numerical types, instead found %s and %s in\n %s"
+	 (string_of_type t1)
+	 (string_of_type t2)
+	     (string_of_expression (EBin(op,e1,e2))))
+  
+and typecheck_bool_op (c:ctx) (op:boolOp) (e1:exp) (e2:exp) : typ =
+  let t1 = typecheck c e1 in
+  let t2 = typecheck c e2 in
+  match (t1, t2) with
+    | (TBool, TBool)     -> TBool
+    | _ -> failwith
+      (Printf.sprintf
+	 "Was expecting Boolean values, instead found %s and %s in\n %s"
+	 (string_of_type t1)
+	 (string_of_type t2)
+	 (string_of_expression (EBinBool(op,e1,e2))))
+  
+and typecheck_if  (c:ctx) (e1:exp) (e2:exp) (e3:exp) :typ =
+   let t1 = typecheck c e1 in
+   let t2 = typecheck c e2 in
+   let t3 = typecheck c e2 in
+   match t1 with
+     | TBool ->
+       begin if t2=t3 then t2 else
+	 failwith
+      (Printf.sprintf
+	 "If statement returns different types %s and %s in\n %s"
+	 (string_of_type t2)
+	 (string_of_type t3)
+	 (string_of_expression (EIF(e1,e2,e3))))
+     end
+     | _ -> failwith
+      (Printf.sprintf
+	 "If statement has non boolean conditional in\n %s"
+	 (string_of_expression (EIF(e1,e2,e3))))
+		       
+and typecheck_app (c:ctx) (e1:exp) (e2:exp): typ =
+  let t1 = typecheck c e1 in
+  let t2 = typecheck c e2 in
+  match (t1,t2) with
+    | ((TArrow (arg, ret)),input) ->
+      if arg = input then ret
+      else failwith
+      (Printf.sprintf
+	 "Type mismatch: Expected %s , found %s in\n %s"
+	 (string_of_type arg)
+	 (string_of_type input)
+	 (string_of_expression (EApp(e1,e2))))
+    | _                       ->  failwith (Printf.sprintf
+	 "Attempted to apply non function in\n %s"	 
+	 (string_of_expression (EApp(e1,e2))))

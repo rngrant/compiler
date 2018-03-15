@@ -1,11 +1,14 @@
 
-type typ     = | TInt | TFloat| TBool | TArrow of typ*typ
+type typ     = | TNaN| TInt | TFloat| TBool | TArrow of typ*typ
     
 type variable = | Var of string
 
+type ctx  = (variable*typ) list
+    
 type binOpExpression  = | BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
 
 type boolOp   =  | BAnd| BOr 
+
     
 type exp =
   | ENaN
@@ -30,6 +33,8 @@ val string_of_expression: exp -> string
 
 val string_of_value: value -> string
 
+val string_of_type: typ -> string
+  
 val eval: exp -> value
 
 val exp_to_value : exp -> value
@@ -37,3 +42,5 @@ val exp_to_value : exp -> value
 val is_value : exp -> bool
   
 val step : exp -> exp
+
+val typecheck : ctx -> exp -> typ

@@ -7,5 +7,7 @@ do
     diff tmp.txt~ "tests/test"$i".out"
     ./compiler.native -parse "tests/test"$i".arith" > tmp.txt~
     diff tmp.txt~ "tests/test"$i".parse.out"
+    ./compiler.native -typecheck "tests/test"$i".arith" > tmp.txt~
+    diff tmp.txt~ "tests/test"$i".typ"
 done    
 
