@@ -1,9 +1,9 @@
-numTest=27
+numTest=31
 
 for i in `seq 1 $numTest`;
 do
-#    echo $i
-#    echo "out"
+#   echo $i
+#   echo "out"
     ./compiler.native "tests/test"$i".arith" > tmp.txt~
     diff tmp.txt~ "tests/test"$i".out"
 #    echo "parse"    

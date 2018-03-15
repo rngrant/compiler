@@ -7,8 +7,10 @@
 %token <string> VARIABLE
 %token TINT TFLOAT TBOOL
 %token FIX
-%token COLON COMMA
+%token COLON COMMA APPEND
 %token FST SND
+%token HEAD TAIL EMPTY
+%token LBRACE RBRACE
 %token NAN UNIT
 %token FUN RARROW
 %token LPAREN RPAREN
@@ -19,6 +21,7 @@
 
 %left Application
 %right RARROW
+%right APPEND
 %left AND OR
 %left IN       /* lowest precedence */
 %left PLUS MINUS        /* lowest precedence */
@@ -56,6 +59,9 @@ expr
 | LPAREN  e1=expr COMMA e2=expr RPAREN   { EPair(e1,e2) }
 | FST e=expr               { EUni (UFst, e)}
 | SND e=expr               { EUni (USnd, e)}
+| EMPTY e=expr               { EUni (UEmpty, e)}
+| HEAD e=expr               { EUni (UHead, e)}
+| TAIL e=expr               { EUni (UTail, e)}
 | e1=expr PLUS   e2=expr   { EBin (BAdd ,e1,  e2) }
 | e1=expr MINUS  e2=expr   { EBin (BSub , e1, e2) }
 | e1=expr TIMES  e2=expr   { EBin (BMult, e1, e2) }
@@ -69,7 +75,8 @@ expr
 | e1=expr OR e2=expr       { EBinBool (BOr, e1, e2) }
 | IF e1=expr THEN e2=expr ELSE e3=expr  { EIF (e1, e2,e3) }    
 | e1= expr e2=expr  { EApp (e1,e2) } %prec Application
-| e=expLit      {e}
+| e = expLit      {e}
+| e = expList      {e}
 ;
 
 (*
@@ -91,6 +98,12 @@ binBoolOp
 ;*)
 
 
+expList
+  :LBRACE RBRACE  COLON t=ttype          { EEmptyList t}
+| LPAREN e=expList RPAREN          {e}
+| e1=expr APPEND e2=expList        {ECons(e1,e2)}
+
+
 expLit
   : n = INT                { EInt n }
 | f = FLOAT                { EFloat f}
@@ -98,7 +111,7 @@ expLit
 | v = VARIABLE             { EVar (Var( v) )}
 | NAN                      { ENaN }
 | UNIT                      { EUnit }
-| LPAREN RPAREN             { EUnit }    
+| LPAREN RPAREN             { EUnit }
 ;
 
 ttype
@@ -109,5 +122,6 @@ ttype
 | NAN                        { TNaN}
 | t1=ttype RARROW t2 = ttype  { TArrow(t1,t2)}
 | t1=ttype TIMES t2 = ttype  { TPair(t1,t2)}
+| LBRACE t=ttype RBRACE      { TList(t) }
 ;
 

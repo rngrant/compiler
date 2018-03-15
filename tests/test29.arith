@@ -1,2 +1,2 @@
-let lst: [int] = 1 :: 2 :: 3 :: 4 ::[]
+let lst: [int] = (1 :: 2 :: 3 :: 4 :: [] : int)
 in  (hd lst, tl lst)

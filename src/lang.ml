@@ -2,13 +2,13 @@
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lang.ml *)
 
 type typ  = TNaN| TInt | TFloat| TBool | TUnit
-	    |TArrow of typ*typ |TPair of typ*typ
+	    |TArrow of typ*typ |TPair of typ*typ | TList of typ
 
 type variable = Var of string
 
 type ctx   =  (variable*typ) list
 
-type uniOpExpression  = UFst| USnd
+type uniOpExpression  = UFst| USnd | UTail| UHead | UEmpty
     
 type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
 
@@ -17,29 +17,35 @@ type boolOp   = BAnd| BOr
 type exp =
   | ENaN
   | EUnit
-  | EVar      of variable
-  | EInt      of int
-  | EFloat    of float
-  | EBool     of bool
+  | EEmptyList of typ
+  | ECons  of exp*exp
+  | EVar   of variable
+  | EInt   of int
+  | EFloat of float
+  | EBool  of bool
   | EPair     of exp*exp
   | EUni      of uniOpExpression*exp
-  | EBin      of binOpExpression*exp * exp
+  | EBin   of binOpExpression*exp * exp      
   | EBinBool  of boolOp*exp * exp
-  | EIF       of exp*exp*exp
-  | ELet      of typ*variable*exp*exp
+  | EIF    of exp*exp*exp
+  | ELet   of typ*variable*exp*exp
   | EFun      of typ*typ*variable*exp
   | EFix      of typ*typ*variable*variable*exp
   | EApp      of exp*exp
 
 type value = VInt of int | VBool of bool | VFloat of float|
     VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp
-	     |VNaN | VUnit | VPair of exp*exp
+	     | VNaN | VUnit | VPair of exp*exp
+	     | VCons of exp*exp | VEmptyList of typ
         
 
 let string_of_uni_op (op:uniOpExpression) : string=
   match op with
-    |UFst  -> "fst"
-    |USnd  -> "snd"
+    | UFst   -> "fst"
+    | USnd   -> "snd"
+    | UTail  -> "tl"
+    | UHead  -> "hd"
+    | UEmpty -> "empty"
 	
 let string_of_bin_op (op:binOpExpression) : string=
   match op with
@@ -58,10 +64,25 @@ let string_of_bool_op (op:boolOp): string =
     |BAnd  -> "and"
     |BOr   -> "or"
 
-    
+let val_to_exp v =
+  match v with     
+    | VNaN     -> ENaN
+    | VUnit    -> EUnit
+    | VEmptyList t -> EEmptyList t
+    | VInt   n -> EInt n
+    | VBool  b -> EBool b
+    | VFloat f -> EFloat f
+    | VCons (first,rest) -> ECons(first,rest)
+    | VPair (e1,e2) -> EPair (e1,e2)
+    | VFun (t1,t2,v,e) -> EFun (t1,t2,v,e)
+    | VFix(t1,t2,v1,v2,e) -> EFix(t1,t2,v1,v2,e)
+      
 let rec string_of_expression (e:exp): string =
   match e with
     | ENaN     -> "NaN"
+    | EEmptyList t -> " [] : "^(string_of_type t)
+    | ECons (first,rest) -> "( Cons "^(string_of_expression first)^
+      " "^(string_of_expression rest)^" )"
     | EUnit    -> "()"
     | EVar (Var vname) -> vname
     | EInt  n  -> string_of_int  n
@@ -94,60 +115,63 @@ let rec string_of_expression (e:exp): string =
       ^ (string_of_expression e) ^ " )"
     | EApp (e1,e2)           -> "( "^ (string_of_expression e1)
       ^" "^(string_of_expression e2) ^" )"
-
-let string_of_value (v:value) : string=
+      
+and string_of_value (v:value) : string=
+  let exp_val_to_string e = (string_of_value (exp_to_value e))
+  in
   match v with
     | VNaN     -> "NaN"
     | VUnit    -> "()"
     | VInt   n -> string_of_int n
     | VBool  b -> string_of_bool b
     | VFloat f -> string_of_float f
+    | VEmptyList t -> "[] : "^(string_of_type t)
+    | VCons (first, rest) -> "["^(exp_val_to_string first)^(rest |> string_of_list)
     | VPair (e1,e2) -> "( "
-      ^(string_of_expression e1)^" , "
-      ^(string_of_expression e2)^" )"
+      ^(exp_val_to_string e1)^" , "
+      ^(exp_val_to_string e2)^" )"
     | VFun (_,_,Var vname,e) -> "fun "^ vname^" ->" ^ string_of_expression e
     | VFix (_,_,Var vname1,Var vname2,e) ->
       "fix "^ vname1^" "^vname2^" ->" ^ string_of_expression e
-
-let rec string_of_type (t:typ) : string=
+	
+and string_of_list (e:exp) :string=
+  match e with
+      | EEmptyList t   -> "] :"^(string_of_type t)
+      | ECons (first, rest) -> " ,"^(string_of_expression first)^(string_of_list rest)
+      | _                   -> (string_of_expression e)^"]"
+	
+and string_of_type (t:typ) : string=
   match t with
     | TNaN         -> "NaN"
     | TUnit        -> "unit"
     | TInt         -> "int"
     | TFloat       -> "float"
     | TBool        -> "bool"
+    | TList  t      -> "["^(string_of_type t)^"]"
     | TPair (t1,t2) -> (string_of_type t1) ^ " * " ^ (string_of_type t2)
     | TArrow (t1,t2) -> (string_of_type t1) ^ "->" ^ (string_of_type t2)
 
-let val_to_exp v =
-    match v with     
-      | VNaN     -> ENaN
-      | VUnit    -> EUnit
-      | VInt   n -> EInt n
-      | VBool  b -> EBool b
-      | VFloat f -> EFloat f
-      | VPair (e1,e2) -> EPair (e1,e2)
-      | VFun (t1,t2,v,e) -> EFun (t1,t2,v,e)
-      | VFix(t1,t2,v1,v2,e) -> EFix(t1,t2,v1,v2,e)
-
-let rec exp_to_value e =
-    match e with     
-      | ENaN     -> VNaN
-      | EUnit    -> VUnit
-      | EInt   n -> VInt n
-      | EBool  b -> VBool b
-      | EFloat f -> VFloat f
-      | EPair (e1,e2) -> VPair (e1,e2)
-      | EFun (t1,t2,v,e) -> VFun (t1,t2,v,e)
-      | EFix(t1,t2,v1,v2,e) -> VFix(t1,t2,v1,v2,e)
-      | _             ->failwith
-	(Printf.sprintf "Expected value instead found : %s"
-	   (string_of_expression e))
-
+and  exp_to_value e =
+  match e with     
+    | ENaN     -> VNaN
+    | EUnit    -> VUnit
+    | EEmptyList t   -> VEmptyList t
+    | EInt   n -> VInt n
+    | EBool  b -> VBool b
+    | EFloat f -> VFloat f
+    | ECons (first,rest) -> VCons(first,rest)
+    | EPair (e1,e2) -> VPair (e1,e2)
+    | EFun (t1,t2,v,e) -> VFun (t1,t2,v,e)
+    | EFix(t1,t2,v1,v2,e) -> VFix(t1,t2,v1,v2,e)
+    | _             ->failwith
+      (Printf.sprintf "Expected value instead found : %s"
+	 (string_of_expression e))
+      
 let rec is_value (e:exp) =
   match e with
-    | ENaN |EUnit |EInt _ | EBool _ | EFloat _ | EFun _| EFix _ -> true
+    | ENaN |EUnit |EInt _ | EBool _ | EFloat _ |EEmptyList _| EFun _| EFix _ -> true
     |  EPair (e1,e2) -> is_value e1 && is_value e2
+    |  ECons (e1,e2) -> is_value e1 && is_value e2
     | _ -> false      
 
       
@@ -157,9 +181,11 @@ let rec subst (v :value) (var:variable) (e:exp) =
   match e with
     | ENaN             -> ENaN
     | EUnit            -> EUnit
+    | EEmptyList t     -> EEmptyList t
     | EInt   n         -> EInt n      
     | EBool  b         -> EBool b
     | EFloat f         -> EFloat f
+    | ECons (e1,e2)    -> ECons(sub e1, sub e2)
     | EPair (e1,e2)    -> EPair(sub e1, sub e2)
     | EUni (op,e)      -> EUni (op, sub e)
     | EBin (op,e1, e2) -> EBin (op,
@@ -208,6 +234,20 @@ and eval_uni_op (op:uniOpExpression) (e:exp) =
     | (USnd, VPair (v1,v2)) -> eval v2
     | (UFst,_) | (USnd,_) -> failwith
       (Printf.sprintf "Was expecting Pair, instead found :(%s %s)"
+	 (string_of_uni_op op)
+	 (string_of_value v))
+    | (UHead, VCons (v1,v2)) -> eval v1
+    | (UTail, VCons (v1,v2)) -> eval v2
+    | (UEmpty, VCons (v1,v2)) -> VBool false
+    | (UEmpty, VEmptyList _) -> VBool true
+    | (UHead ,_)|(UTail ,_)->
+       failwith
+      (Printf.sprintf "Was expecting Non-empty List, instead found :(%s %s)"
+	 (string_of_uni_op op)
+	 (string_of_value v))
+    | (UEmpty ,_)->
+       failwith
+      (Printf.sprintf "Was expecting List, instead found :(%s %s)"
 	 (string_of_uni_op op)
 	 (string_of_value v))
       
@@ -267,10 +307,12 @@ and eval_bool (e:exp) : bool=
 and step (e:exp) : exp =
   match e with
     | ENaN             -> ENaN
+    | EEmptyList t     -> EEmptyList t
     | EUnit            -> EUnit
     | EInt   n         -> EInt n      
     | EBool  b         -> EBool b
     | EFloat f         -> EFloat f
+    | ECons (e1,e2)    -> step_cons e1 e2
     | EPair (e1,e2)    -> step_pair e1 e2
     | EFun (t1,t2,var,e)        -> EFun (t1,t2,var,e)
     | EFix (t1,t2,var1,var2,e)  -> EFix (t1,t2,var1,var2,e)
@@ -285,6 +327,14 @@ and step (e:exp) : exp =
     | EVar (Var var1)     ->failwith
       (Printf.sprintf "Unbound variable :%s"
 	 var1)
+
+and step_cons e1 e2 =
+  if is_value e1 then
+    begin
+      if is_value e2 then ECons (e1,e2)
+      else ECons(e1,step e2)
+    end
+  else ECons(step e1,e2)
 
 and step_pair e1 e2 =
   if is_value e1 then
@@ -354,10 +404,12 @@ let rec typecheck (c:ctx) (e:exp) : typ =
   match e with
     | ENaN   -> TNaN
     | EUnit   -> TUnit
+    | EEmptyList t  -> TList t
     | EVar v ->  check_context v c
     | EInt _ -> TInt
     | EFloat _ -> TFloat
     | EBool _  -> TBool
+    | ECons (e1,e2) -> typecheck_list c e1 e2
     | EPair(e1,e2) -> TPair(typecheck c e1,typecheck c e2)
     | EUni  (op,e) -> typecheck_uni_op c op e
     | EBin  (op,e1, e2) -> typecheck_bin_op c op e1 e2 
@@ -395,6 +447,20 @@ let rec typecheck (c:ctx) (e:exp) : typ =
 	     (string_of_expression e))
     | EApp (e1,e2) -> typecheck_app c e1 e2
 
+and typecheck_list (c:ctx) (first:exp) (rest:exp) : typ =
+  let t1 = typecheck c first in
+  let t2 = typecheck c rest in
+  match (t1, t2) with
+    | (first_t, TList rest_t) -> if first_t = rest_t
+      then TList rest_t
+      else failwith
+	(Printf.sprintf "Type Error, expected %s in\n %s"
+	   (string_of_type rest_t)
+	   (string_of_expression (ECons(first,rest))))
+    | _  -> failwith
+      (Printf.sprintf "Type Error, appending to non list in\n %s"
+	 (string_of_expression (ECons (first,rest))))
+      
 and typecheck_uni_op (c:ctx) (op:uniOpExpression) (e:exp) : typ =
   let t = typecheck c e in
   match (op,t) with
@@ -402,6 +468,14 @@ and typecheck_uni_op (c:ctx) (op:uniOpExpression) (e:exp) : typ =
     | (USnd, TPair (t1,t2)) -> t2
     | (UFst, _)| (USnd, _) -> failwith
        (Printf.sprintf "%s must be applied to a pair, instead found : %s in\n %s"
+	  (string_of_uni_op op)
+	  (string_of_type t)
+	  (string_of_expression e))
+    | (UHead, TList t1) -> t1
+    | (UTail, TList t1) -> TList t1
+    | (UEmpty, TList t1) -> TBool
+    | (UHead, _)| (UTail, _)| (UEmpty, _) -> failwith
+       (Printf.sprintf "%s must be applied to a List, instead found : %s in\n %s"
 	  (string_of_uni_op op)
 	  (string_of_type t)
 	  (string_of_expression e))

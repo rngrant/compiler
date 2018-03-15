@@ -15,13 +15,14 @@ let token_from_symbol symbol =
   match symbol with
     |'('      -> LPAREN
     |')'      -> RPAREN
+    | '['     -> LBRACE
+    | ']'     -> RBRACE      
     |'+'      -> PLUS
     |'-'      -> MINUS
     |'*'      -> TIMES
     |'/'      -> DIV
     |'='      -> EQUAL
     |'>'      -> GTHAN
-    | ':'     -> COLON
     | ','     -> COMMA
     |'<'      -> LTHAN
     | _       -> failwith
@@ -44,7 +45,10 @@ let token_from_word word =
     | "and"   -> AND
     | "or"    -> OR
     | "fst"   -> FST
-    | "snd"   -> SND      
+    | "snd"   -> SND
+    | "empty" -> EMPTY
+    | "hd"     -> HEAD
+    | "tl"     -> TAIL
     | "int"   -> TINT
     | "float" -> TFLOAT
     | "bool"  -> TBOOL
@@ -57,6 +61,8 @@ let token_from_word word =
     | ">="   -> GREATEQ
     | "->"   -> RARROW
     | "()"   -> UNIT
+    | "::"   -> APPEND      
+    | ":"    -> COLON
     | _      ->  failwith
       (Printf.sprintf
 	 "Expecting symbols, instead found :%s"
@@ -69,8 +75,8 @@ let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
 let digit      = ['0'-'9']
 let single_char_symbol =
-  '(' | ')' | ':'| '+' | '-' | '/' | '=' |'*'|','| '<' | '>'
-let multi_char_symbol =  '-' | '<' | '=' | '>' | '['|']'
+  '(' | ')' | '+' | '-' | '/' | '=' |'*'|','| '<' | '>'| '['|']'
+let multi_char_symbol =  '-' | '<' | '=' | '>' | ':'
 let character = ['a'-'z']|['A'-'Z']
 let variable_characters = character | '_'| digit
     
