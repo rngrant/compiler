@@ -9,7 +9,7 @@
 %token FIX
 %token WHILE DO END
 %token COLON COMMA APPEND
-%token FST SND
+%token FST SND NTH
 %token HEAD TAIL EMPTY
 %token LBRACE RBRACE
 %token NAN 
@@ -20,7 +20,6 @@
 %token IF THEN ELSE
 %token AND OR
 %token PLUS MINUS TIMES DIV LESSEQ GREATEQ GTHAN LTHAN
-
 
 %right RARROW
 %left IN
@@ -63,10 +62,12 @@ expr
 | FUN LPAREN v=VARIABLE COLON t1=ttype RPAREN COLON t2=ttype EQUAL e=expr
     { EFun (t1,t2,Var(v),e) }
 | WHILE e1= expr DO e2=expr END           {EWhile(e1,e2)}
-| LPAREN  e1=expr COMMA e2=expr RPAREN   { EPair(e1,e2) }
-| FST e=expr               { EUni (UFst, e)}
-| SND e=expr               { EUni (USnd, e)}
-| EMPTY e=expr               { EUni (UEmpty, e)}
+| LPAREN  e1=expr COMMA e2=expTuple RPAREN
+    { ETuple (List.length (e1::e2), (e1::e2))}
+| FST e=expr                { EUni (UFst, e)}
+| SND e=expr                { EUni (USnd, e)}
+| NTH n=INT e=expr          { EUni (UNth n,e)}
+| EMPTY e=expr              { EUni (UEmpty, e)}
 | HEAD e=expr               { EUni (UHead, e)}
 | TAIL e=expr               { EUni (UTail, e)}
 | REF  e=expr               { EUni (URef,e)}
@@ -109,6 +110,10 @@ binBoolOp
 ;*)
 
 
+expTuple
+  : e1=expr COMMA e2=expTuple { e1::e2 }
+| e=expr {e::[]}
+
 expList
   :LBRACE RBRACE  COLON t=ttype          { EEmptyList t}
 | LPAREN e=expList RPAREN          {e}
@@ -125,15 +130,22 @@ expLit
 | LPAREN RPAREN             { EUnit }
 ;
 
-ttype
-  : TINT                     { TInt }
+ttype 
+  : LPAREN t=ttype RPAREN  {t}
+| TINT                     { TInt }
 | TFLOAT                     { TFloat}
 | TBOOL                      { TBool}
 | LPAREN RPAREN              { TUnit}
 | NAN                        { TNaN}
 | t1=ttype RARROW t2 = ttype { TArrow(t1,t2)}
-| t1=ttype TIMES t2 = ttype  { TPair(t1,t2)}
+| LPAREN t1=ttype TIMES t2 = ttypeTuple RPAREN   
+    { TTuple(List.length (t1::t2),(t1::t2))}
 | LBRACE t=ttype RBRACE      { TList(t) }
 | LTHAN t=ttype GTHAN        { TRef(t)}
 ;
+
+ttypeTuple
+  : t1=ttype TIMES t2 = ttypeTuple   {t1::t2}
+| t=ttype                             {t::[]}
+
 

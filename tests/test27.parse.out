@@ -1,1 +1,1 @@
-( let [ maxPair ( fun ( p ) ( if ( > ( fst p ) ( snd p ) ) ( fst p ) ( snd p ) ) ) ] ( maxPair ( pair 2 7 ) ) )
+( let [ maxPair ( fun ( p ) ( if ( > ( fst p ) ( snd p ) ) ( fst p ) ( snd p ) ) ) ] ( maxPair ( tuple 2 7 ) ) )

@@ -2,42 +2,44 @@
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lang.ml *)
 
 type typ  = TNaN| TInt | TFloat| TBool | TUnit
-	    |TArrow of typ*typ |TPair of typ*typ | TList of typ | TRef of typ
+	    |TArrow of typ*typ |TTuple of int*(typ list) | TList of typ | TRef of typ
 
 type variable = Var of string
 
 type ctx   =  (variable*typ) list
 
 type uniOpExpression  = UFst| USnd | UTail| UHead | UEmpty | UBang | URef
+			| UNth of int
     
-type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq | BSeq |BSetEq
+type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq
+		       | BGT| BLT| BEq | BSeq |BSetEq 
 
 type boolOp   = BAnd| BOr
 
 type exp =
   | ENaN
   | EUnit
-  | EPtr   of int
+  | EPtr       of int
   | EEmptyList of typ
-  | ECons  of exp*exp
-  | EVar   of variable
-  | EInt   of int
-  | EFloat of float
-  | EBool  of bool
-  | EPair     of exp*exp
-  | EUni      of uniOpExpression*exp
-  | EBin   of binOpExpression*exp * exp      
-  | EBinBool  of boolOp*exp * exp
-  | EIF    of exp*exp*exp
-  | ELet   of typ*variable*exp*exp
-  | EFun      of typ*typ*variable*exp
-  | EFix      of typ*typ*variable*variable*exp
-  | EWhile    of exp*exp
-  | EApp      of exp*exp
+  | ECons      of exp*exp
+  | EVar       of variable
+  | EInt       of int
+  | EFloat     of float
+  | EBool      of bool
+  | ETuple     of int*(exp list)
+  | EUni       of uniOpExpression*exp
+  | EBin       of binOpExpression*exp * exp      
+  | EBinBool   of boolOp*exp * exp
+  | EIF        of exp*exp*exp
+  | ELet       of typ*variable*exp*exp
+  | EFun       of typ*typ*variable*exp
+  | EFix       of typ*typ*variable*variable*exp
+  | EWhile     of exp*exp
+  | EApp       of exp*exp
 
 type value = VInt of int | VBool of bool | VFloat of float| VPtr of int|
     VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp
-	     | VNaN | VUnit | VPair of exp*exp
+	     | VNaN | VUnit | VTuple of int*(exp list)
 	     | VCons of exp*exp | VEmptyList of typ
 
 type environment   = (int*value) list		 
@@ -51,18 +53,19 @@ let string_of_uni_op (op:uniOpExpression) : string=
     | UEmpty -> "empty"
     | UBang  -> "!"
     | URef   -> "ref"
+    | UNth n -> "nth "^(string_of_int n)
 	
 let string_of_bin_op (op:binOpExpression) : string=
   match op with
-    |BAdd  -> "+"
-    |BSub  -> "-"
-    |BMult -> "*"
-    |BDiv  -> "/"      
-    |BLEq  -> "<="       
-    |BGEq  -> ">="
-    |BGT   -> ">"
-    |BLT   -> "<"
-    |BEq   -> "="
+    | BAdd  -> "+"
+    | BSub  -> "-"
+    | BMult -> "*"
+    | BDiv  -> "/"      
+    | BLEq  -> "<="       
+    | BGEq  -> ">="
+    | BGT   -> ">"
+    | BLT   -> "<"
+    | BEq   -> "="
     | BSetEq -> "!="
     | BSeq   -> ";"
 
@@ -81,7 +84,7 @@ let val_to_exp v =
     | VBool  b -> EBool b
     | VFloat f -> EFloat f
     | VCons (first,rest) -> ECons(first,rest)
-    | VPair (e1,e2) -> EPair (e1,e2)
+    | VTuple (n,elst) -> ETuple (n,elst)
     | VFun (t1,t2,v,e) -> EFun (t1,t2,v,e)
     | VFix(t1,t2,v1,v2,e) -> EFix(t1,t2,v1,v2,e)
       
@@ -97,9 +100,11 @@ let rec string_of_expression (e:exp): string =
     | EInt  n  -> string_of_int  n
     | EBool b  -> string_of_bool b
     | EFloat f -> string_of_float f
-    | EPair (e1,e2) -> "( pair "
-      ^(string_of_expression e1) ^" "
-      ^(string_of_expression e2)^ " )"
+    | ETuple (n,exp_list) -> "( tuple "^
+      (let string_of_expression_space e = (string_of_expression e) ^" "
+      in
+       List.fold_left (^) "" (List.map string_of_expression_space exp_list))
+      ^ ")"
     | EIF (e1,e2,e3)  -> "( if "
       ^(string_of_expression e1) ^" "
       ^(string_of_expression e2)^ " "
@@ -139,12 +144,24 @@ and string_of_value (v:value) : string=
     | VFloat f -> string_of_float f
     | VEmptyList t -> "[] : "^(string_of_type t)
     | VCons (first, rest) -> "["^(exp_val_to_string first)^(rest |> string_of_list)
-    | VPair (e1,e2) -> "( "
-      ^(exp_val_to_string e1)^" , "
-      ^(exp_val_to_string e2)^" )"
+    | VTuple (n,e1::exp_list) -> "( "^(exp_val_to_string e1)
+      ^(string_of_tuple (n-1) exp_list)^" )"
+    | VTuple (n,[])     -> ""
     | VFun (_,_,Var vname,e) -> "fun "^ vname^" ->" ^ string_of_expression e
     | VFix (_,_,Var vname1,Var vname2,e) ->
       "fix "^ vname1^" "^vname2^" ->" ^ string_of_expression e
+
+and string_of_tuple (n:int) (exp_list:exp list) :string =
+  let exp_val_to_string e = (string_of_value (exp_to_value e))
+  in
+  match (n,exp_list) with
+    | (0,_)   -> ""
+    | (1,hd::tl)   -> " , "^exp_val_to_string hd
+    | (_,[])   -> failwith
+      (Printf.sprintf "Malformed type: Tuple")
+    | (n,hd::tl)   -> " , "
+      ^(exp_val_to_string hd)^(string_of_tuple (n-1) tl)
+      
 	
 and string_of_list (e:exp) :string=
   match e with
@@ -155,14 +172,23 @@ and string_of_list (e:exp) :string=
 and string_of_type (t:typ) : string=
   match t with
     | TNaN         -> "NaN"
-    | TUnit        -> "unit"
+    | TUnit        -> "()"
     | TInt         -> "int"
     | TFloat       -> "float"
     | TBool        -> "bool"
     | TRef  t      -> "<"^(string_of_type t)^">"
     | TList  t      -> "["^(string_of_type t)^"]"
-    | TPair (t1,t2) -> (string_of_type t1) ^ " * " ^ (string_of_type t2)
-    | TArrow (t1,t2) -> (string_of_type t1) ^ "->" ^ (string_of_type t2)
+    | TTuple (n,t_list) ->"( "^ (string_of_tuple_type n t_list)^" )"
+    | TArrow (t1,t2) ->
+      "( "^(string_of_type t1) ^ "->" ^ (string_of_type t2)^" )"
+
+and string_of_tuple_type (n:int) (t_list:typ list) :string=
+  match (n,t_list) with
+    | (0,_) -> ""
+    | (1,hd::[]) -> string_of_type hd
+    | (n, hd::tl) -> (string_of_type hd)^" * "^(string_of_tuple_type (n-1) tl)
+    | _         ->failwith
+      (Printf.sprintf "Malformed type: Tuple")
 
 and  exp_to_value e =
   match e with     
@@ -174,17 +200,20 @@ and  exp_to_value e =
     | EBool  b -> VBool b
     | EFloat f -> VFloat f
     | ECons (first,rest) -> VCons(first,rest)
-    | EPair (e1,e2) -> VPair (e1,e2)
+    | ETuple (n,e_list) -> VTuple (n,e_list)
     | EFun (t1,t2,v,e) -> VFun (t1,t2,v,e)
     | EFix(t1,t2,v1,v2,e) -> VFix(t1,t2,v1,v2,e)
     | _             ->failwith
       (Printf.sprintf "Expected value instead found : %s"
 	 (string_of_expression e))
-      
+
 let rec is_value (e:exp) =
   match e with
-    | ENaN |EUnit |EInt _ | EPtr _| EBool _ | EFloat _ |EEmptyList _| EFun _| EFix _ -> true
-    |  EPair (e1,e2) -> is_value e1 && is_value e2
+    | ENaN |EUnit |EInt _ | EPtr _| EBool _
+    | EFloat _ |EEmptyList _| EFun _| EFix _ -> true
+    |  ETuple (_,[]) -> false
+    |  ETuple (_,hd::[]) -> is_value hd
+    |  ETuple (_,lst) -> List.fold_left (&&) true  (List.map is_value lst)
     |  ECons (e1,e2) -> is_value e1 && is_value e2
     | _ -> false      
 
@@ -201,7 +230,7 @@ let rec subst (v :value) (var:variable) (e:exp) : exp =
     | EBool  b         -> EBool b
     | EFloat f         -> EFloat f
     | ECons (e1,e2)    -> ECons(sub e1, sub e2)
-    | EPair (e1,e2)    -> EPair(sub e1, sub e2)
+    | ETuple (n,e_list) -> ETuple(n, List.map sub e_list)
     | EUni (op,e)      -> EUni (op, sub e)
     | EBin (op,e1, e2) -> EBin (op,
 				(sub e1),
@@ -243,15 +272,30 @@ and eval_bool_op (env:environment) (op:boolOp) (e1:exp) (e2:exp) : (environment*
 	 (string_of_value v1)
 	 (string_of_value v2))
 
-and eval_uni_op (env:environment) (op:uniOpExpression) (e:exp): (environment*value) =
+and eval_uni_op (env:environment) (op:uniOpExpression) (e:exp):
+    (environment*value) =
   let (env,v) = eval env e in
+  let rec get_nth n e_list =
+    match (n,e_list) with
+    | (0,hd::_) ->hd
+    | (n, hd::tl) -> get_nth (n-1) tl
+    | (n, [])   ->failwith
+      (Printf.sprintf "Malformed type: tuple")
+  in
   match (op,v) with
-    | (UFst, VPair (v1,v2)) -> eval env v1
-    | (USnd, VPair (v1,v2)) -> eval env v2
-    | (UFst,_) | (USnd,_) -> failwith
-      (Printf.sprintf "Was expecting Pair, instead found :(%s %s)"
+    | (UFst, VTuple (_,hd::_)) -> eval env hd
+    | (USnd, VTuple (_,hd1::hd2::_)) -> eval env hd2
+    | (UNth n1, VTuple (n2,e_list)) ->if n1< n2 then
+	eval env (get_nth n1 e_list)
+      else
+	failwith
+      (Printf.sprintf "Index out of bounds exception in :(%s %s)"
 	 (string_of_uni_op op)
 	 (string_of_value v))
+    | (UFst,_) | (USnd,_)|(UNth _,_) -> failwith
+      (Printf.sprintf "Was expecting Tuple instead found :(%s %s)"
+	 (string_of_uni_op op)
+	 (string_of_value v))   
     | (UHead, VCons (v1,v2)) -> eval env v1
     | (UTail, VCons (v1,v2)) -> eval env v2
     | (UEmpty, VCons (v1,v2)) -> (env ,VBool false)
@@ -361,7 +405,7 @@ and step (env:environment) (e:exp) : (environment*exp) =
     | EBool  b         -> (env,EBool b)
     | EFloat f         -> (env,EFloat f)
     | ECons (e1,e2)    -> step_cons env e1 e2
-    | EPair (e1,e2)    -> step_pair env e1 e2
+    | ETuple (n,e_list)    -> step_tuple env n e_list
     | EFun (t1,t2,var,e)        -> (env,EFun (t1,t2,var,e))
     | EFix (t1,t2,var1,var2,e)  -> (env,EFix (t1,t2,var1,var2,e))
     | EWhile (e1,e2)            -> (env,EIF (e1, EBin(BSeq,e2,e),EUnit))
@@ -385,13 +429,19 @@ and step_cons (env:environment) (e1:exp) (e2:exp) : (environment*exp)=
     end
   else let (env, e1) =(step env e1) in (env,ECons(e1,e2))
 
-and step_pair (env:environment) (e1:exp) (e2:exp) : (environment*exp) = 
-  if is_value e1 then
-    begin
-      if is_value e2 then (env,EPair (e1,e2))
-      else let (env ,e2) = step env e2 in (env,EPair(e1, e2))
-    end
-  else let (env ,e1) = step env e1 in (env,EPair( e1,e2))
+and step_tuple (env:environment) (n:int) (e_list:exp list) : environment*exp =
+  let rec step_tuple_help env e_list =
+    (match e_list with
+      | (hd::[]) -> let (env,e) = step env hd in (env,e::[])
+      | (hd::tl) -> if is_value hd
+	then let (env,e_list) = step_tuple_help env tl in (env,hd::e_list)
+	else let (env,e)      = step env hd in (env,e::tl)
+      | _ -> failwith
+      (Printf.sprintf "Malformed type: Tuple"))
+  in
+  if is_value (ETuple (n,e_list)) then (env,(ETuple (n,e_list)))
+  else let (env ,e_list) =  step_tuple_help env e_list
+       in  (env,(ETuple (n,e_list)))
 
 and step_uni_op (env:environment) (op:uniOpExpression) (e:exp): (environment*exp) =
   if is_value e then
@@ -466,7 +516,7 @@ let rec typecheck (c:ctx) (e:exp) : typ =
     | EFloat _ -> TFloat
     | EBool _  -> TBool
     | ECons (e1,e2) -> typecheck_list c e1 e2
-    | EPair(e1,e2) -> TPair(typecheck c e1,typecheck c e2)
+    | ETuple (n,e_list) -> TTuple (n,(List.map (typecheck c) e_list))
     | EUni  (op,e) -> typecheck_uni_op c op e
     | EBin  (op,e1, e2) -> typecheck_bin_op c op e1 e2 
     | EBinBool (op,e1, e2) -> typecheck_bool_op c op e1 e2 
@@ -521,13 +571,22 @@ and typecheck_list (c:ctx) (first:exp) (rest:exp) : typ =
 and typecheck_uni_op (c:ctx) (op:uniOpExpression) (e:exp) : typ =
   let t = typecheck c e in
   match (op,t) with
-    | (UFst, TPair (t1,t2)) -> t1
-    | (USnd, TPair (t1,t2)) -> t2
-    | (UFst, _)| (USnd, _) -> failwith
-       (Printf.sprintf "%s must be applied to a pair, instead found : %s in\n %s"
+    | (UFst, TTuple (n,t1::tl)) -> t1
+    | (USnd, TTuple (n,t1::t2::_)) -> t2
+    | (UNth n1, TTuple (n2, t_list)) -> if n1<n2 then
+	List.nth t_list n1
+      else failwith
+       (Printf.sprintf "%s applied to %s in\n %s"
 	  (string_of_uni_op op)
-	  (string_of_type t)
+	  (string_of_type t)	  	  
 	  (string_of_expression e))
+ 
+    | (UFst, _)| (USnd, _)| (UNth _,_)-> failwith
+		  (Printf.sprintf
+		     "%s must be applied to a tuple, instead found : %s in\n %s"
+		     (string_of_uni_op op)
+		     (string_of_type t)
+		     (string_of_expression e))
     | (UHead, TList t1) -> t1
     | (UTail, TList t1) -> TList t1
     | (UEmpty, TList t1) -> TBool

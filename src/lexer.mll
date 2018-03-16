@@ -52,6 +52,7 @@ let token_from_word word =
     | "or"    -> OR
     | "fst"   -> FST
     | "snd"   -> SND
+    | "nth"   -> NTH
     | "empty" -> EMPTY
     | "hd"     -> HEAD
     | "tl"     -> TAIL

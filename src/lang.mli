@@ -1,5 +1,5 @@
 type typ     = | TNaN| TInt | TFloat| TBool | TUnit
-	       | TArrow of typ*typ|TPair of typ*typ
+	       | TArrow of typ*typ|TTuple of int*(typ list)
 	       | TList of typ |  TRef of typ    
     
 type variable = | Var of string
@@ -7,6 +7,7 @@ type variable = | Var of string
 type ctx  = (variable*typ) list
 
 type uniOpExpression  = | UFst| USnd | UTail| UHead | UEmpty | UBang | URef
+			| UNth of int
     
 type binOpExpression  = | BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq | BSeq |BSetEq
 
@@ -21,8 +22,8 @@ type exp =
   | EVar       of variable
   | EInt       of int
   | EFloat     of float
-  | EBool      of bool
-  | EPair      of exp*exp
+  | EBool      of bool      
+  | ETuple     of int*(exp list)
   | EUni       of uniOpExpression*exp
   | EBin       of binOpExpression*exp * exp      
   | EBinBool   of boolOp*exp * exp
@@ -36,7 +37,7 @@ type exp =
 
 type value =  | VInt of int | VBool of bool | VFloat of float|VPtr of int|
     VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp
-	      |VNaN | VUnit | VPair of exp*exp
+	      |VNaN | VUnit |  VTuple of int*(exp list)
 	      | VCons of exp*exp | VEmptyList of typ
 
 type environment   = (int*value) list
