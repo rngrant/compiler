@@ -32,6 +32,7 @@ type exp =
   | ELet   of typ*variable*exp*exp
   | EFun      of typ*typ*variable*exp
   | EFix      of typ*typ*variable*variable*exp
+  | EWhile    of exp*exp
   | EApp      of exp*exp
 
 type value = VInt of int | VBool of bool | VFloat of float| VPtr of int|
@@ -121,6 +122,8 @@ let rec string_of_expression (e:exp): string =
       ^ (string_of_expression e) ^ " )"
     |  EFix (_,_,Var vname1,Var vname2,e) ->"( fix ( "^vname1^" , "^vname2^" ) "
       ^ (string_of_expression e) ^ " )"
+    | EWhile (e1,e2)   -> "( while "^(string_of_expression e1)
+      ^" "^(string_of_expression e2) ^" )"
     | EApp (e1,e2)           -> "( "^ (string_of_expression e1)
       ^" "^(string_of_expression e2) ^" )"
       
@@ -220,6 +223,7 @@ let rec subst (v :value) (var:variable) (e:exp) : exp =
 	EFix(t1,t2,Var var1,Var var2,e)
       else
 	EFix(t1,t2,Var var1,Var var2,sub e)
+    | EWhile (e1,e2)    -> EWhile(sub e1,sub e2)
 	
     
 let rec eval (env:environment) (e:exp) : environment*value =
@@ -360,6 +364,7 @@ and step (env:environment) (e:exp) : (environment*exp) =
     | EPair (e1,e2)    -> step_pair env e1 e2
     | EFun (t1,t2,var,e)        -> (env,EFun (t1,t2,var,e))
     | EFix (t1,t2,var1,var2,e)  -> (env,EFix (t1,t2,var1,var2,e))
+    | EWhile (e1,e2)            -> (env,EIF (e1, EBin(BSeq,e2,e),EUnit))
     | EUni (op,e)      -> step_uni_op env op e
     | EBin (op,e1, e2) -> step_bin_op env op e1 e2      
     | EBinBool (op,e1, e2) -> step_bool_op env op e1 e2
@@ -496,6 +501,7 @@ let rec typecheck (c:ctx) (e:exp) : typ =
 	     (string_of_type expected_t)
 	     (string_of_type actual_t)
 	     (string_of_expression e))
+    | EWhile (e1,e2) -> TUnit
     | EApp (e1,e2) -> typecheck_app c e1 e2
 
 and typecheck_list (c:ctx) (first:exp) (rest:exp) : typ =

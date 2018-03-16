@@ -30,6 +30,7 @@ type exp =
   | ELet       of typ*variable*exp*exp
   | EFun       of typ*typ*variable*exp
   | EFix       of typ*typ*variable*variable*exp
+  | EWhile    of exp*exp
   | EApp       of exp*exp
 
 

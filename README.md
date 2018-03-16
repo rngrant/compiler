@@ -60,8 +60,32 @@ e ::= n | f | (e) | e1 + e2 | e1 - e2 | e1 * e2 | e1 /e2
 ..    | true | false | e1 <= e2 |e1 < e2|e1 = e2||e1 > e2 |e1 >= e2
 ..    | if e1 then e2 else e3 | NaN | e1 and e2 | e1 or e2
 ..    | let x = e1 in e2 | fun x -> e | fix x y -> e| e1 e2
+..    |() | (e1,e2) | fst e | snd e|
+..    |[] : t | e1 :: e2 | hd e | tl e | empty e
+..    | ref e | e1 := e2 | !e | e1 ; e2 | while e1 do e2 end
+
+
+t ::= t1*t2 | [t]
 
 ## Changelog
+
+Build on 03/16/18:
+### New features
+
+- Updated Grammar in readme
+- Added state
+- Updated tests to support new featurs
+
+### changes
+
+- Implemented above features
+
+### Known Bugs
+
+- Do not support nested variables with the same name
+- Does not currently support currying
+
+
 
 Build on 03/15/18:
 ### New features

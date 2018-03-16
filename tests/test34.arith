@@ -1,0 +1,4 @@
+let x : <bool> = ref false in
+let y : <bool> = ref !x   in
+x := !y or true;
+if !y then !x else true

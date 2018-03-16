@@ -1,0 +1,4 @@
+let x: <int>  = ref 1+5 in
+let y: <bool> = ref false in
+x := !x + !x;
+!x

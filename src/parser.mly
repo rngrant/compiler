@@ -7,6 +7,7 @@
 %token <string> VARIABLE
 %token TINT TFLOAT TBOOL
 %token FIX
+%token WHILE DO END
 %token COLON COMMA APPEND
 %token FST SND
 %token HEAD TAIL EMPTY
@@ -20,13 +21,14 @@
 %token AND OR
 %token PLUS MINUS TIMES DIV LESSEQ GREATEQ GTHAN LTHAN
 
-%left SEMICOLON
+
 %right RARROW
+%left IN
+%left SEMICOLON
 %right APPEND
 %left REF
 %left SETEQUAL
-%left AND OR
-%left IN       /* lowest precedence */
+%left AND OR     /* lowest precedence */
 %left PLUS MINUS        /* lowest precedence */
 %left TIMES DIV         /* medium precedence */
 %left LESSEQ  GREATEQ  GTHAN LTHAN FST SND  /* highest precedence */
@@ -60,6 +62,7 @@ expr
     {EFix (t1,t2,Var (v1), Var(v2), e)}
 | FUN LPAREN v=VARIABLE COLON t1=ttype RPAREN COLON t2=ttype EQUAL e=expr
     { EFun (t1,t2,Var(v),e) }
+| WHILE e1= expr DO e2=expr END           {EWhile(e1,e2)}
 | LPAREN  e1=expr COMMA e2=expr RPAREN   { EPair(e1,e2) }
 | FST e=expr               { EUni (UFst, e)}
 | SND e=expr               { EUni (USnd, e)}

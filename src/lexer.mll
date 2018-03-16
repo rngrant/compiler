@@ -42,6 +42,9 @@ let token_from_word word =
     | "in"   -> IN
     | "fun"  -> FUN
     | "fix"  -> FIX
+    | "while" -> WHILE
+    | "do"    -> DO
+    | "end"   -> END
     | "ref"  -> REF
     | "true" -> BOOL true
     | "false" -> BOOL false

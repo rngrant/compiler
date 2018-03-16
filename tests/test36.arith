@@ -1,0 +1,10 @@
+let x : <int> = ref 0 in
+let z : <int> = ref 0 in
+while (!x <10) do
+      let y : <int> =ref 0 in
+      while (!y <10) do
+      y := !y +1
+      end ;
+      z:= !z+!y;
+      x := !x +1
+      end ; !z
