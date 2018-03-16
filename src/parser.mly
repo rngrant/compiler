@@ -20,14 +20,17 @@
 %token AND OR
 %token PLUS MINUS TIMES DIV LESSEQ GREATEQ GTHAN LTHAN
 
-%left Application
+%left SEMICOLON
 %right RARROW
 %right APPEND
+%left REF
+%left SETEQUAL
 %left AND OR
 %left IN       /* lowest precedence */
 %left PLUS MINUS        /* lowest precedence */
 %left TIMES DIV         /* medium precedence */
 %left LESSEQ  GREATEQ  GTHAN LTHAN FST SND  /* highest precedence */
+%right BANG
 
 %start main             /* the entry point */
 %token EOF
@@ -63,6 +66,10 @@ expr
 | EMPTY e=expr               { EUni (UEmpty, e)}
 | HEAD e=expr               { EUni (UHead, e)}
 | TAIL e=expr               { EUni (UTail, e)}
+| REF  e=expr               { EUni (URef,e)}
+| BANG  e=expr              { EUni (UBang,e)}
+| e1=expr SETEQUAL e2=expr  {EBin(BSetEq,e1,e2)}
+| e1=expr SEMICOLON e2=expr {EBin(BSeq,e1,e2)}
 | e1=expr PLUS   e2=expr   { EBin (BAdd ,e1,  e2) }
 | e1=expr MINUS  e2=expr   { EBin (BSub , e1, e2) }
 | e1=expr TIMES  e2=expr   { EBin (BMult, e1, e2) }
@@ -75,7 +82,7 @@ expr
 | e1=expr AND e2=expr      { EBinBool (BAnd, e1, e2) }
 | e1=expr OR e2=expr       { EBinBool (BOr, e1, e2) }
 | IF e1=expr THEN e2=expr ELSE e3=expr  { EIF (e1, e2,e3) }    
-| e1= expr e2=expr  { EApp (e1,e2) } %prec Application
+| e1= expr e2=expr  { EApp (e1,e2) }
 | e = expLit      {e}
 | e = expList      {e}
 ;
@@ -121,8 +128,9 @@ ttype
 | TBOOL                      { TBool}
 | LPAREN RPAREN              { TUnit}
 | NAN                        { TNaN}
-| t1=ttype RARROW t2 = ttype  { TArrow(t1,t2)}
+| t1=ttype RARROW t2 = ttype { TArrow(t1,t2)}
 | t1=ttype TIMES t2 = ttype  { TPair(t1,t2)}
 | LBRACE t=ttype RBRACE      { TList(t) }
+| LTHAN t=ttype GTHAN        { TRef(t)}
 ;
 

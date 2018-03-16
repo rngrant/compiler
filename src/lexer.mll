@@ -16,7 +16,7 @@ let token_from_symbol symbol =
     |'('      -> LPAREN
     |')'      -> RPAREN
     | '['     -> LBRACE
-    | ']'     -> RBRACE      
+    | ']'     -> RBRACE
     |'+'      -> PLUS
     |'-'      -> MINUS
     |'*'      -> TIMES

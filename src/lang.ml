@@ -2,21 +2,22 @@
  * https://github.com/psosera/csc312-example-compiler/blob/master/ocaml/src/lang.ml *)
 
 type typ  = TNaN| TInt | TFloat| TBool | TUnit
-	    |TArrow of typ*typ |TPair of typ*typ | TList of typ
+	    |TArrow of typ*typ |TPair of typ*typ | TList of typ | TRef of typ
 
 type variable = Var of string
 
 type ctx   =  (variable*typ) list
 
-type uniOpExpression  = UFst| USnd | UTail| UHead | UEmpty
+type uniOpExpression  = UFst| USnd | UTail| UHead | UEmpty | UBang | URef
     
-type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq
+type binOpExpression = BAdd | BSub | BMult| BDiv | BLEq | BGEq | BGT| BLT| BEq | BSeq |BSetEq
 
 type boolOp   = BAnd| BOr
 
 type exp =
   | ENaN
   | EUnit
+  | EPtr   of int
   | EEmptyList of typ
   | ECons  of exp*exp
   | EVar   of variable
@@ -33,11 +34,12 @@ type exp =
   | EFix      of typ*typ*variable*variable*exp
   | EApp      of exp*exp
 
-type value = VInt of int | VBool of bool | VFloat of float|
+type value = VInt of int | VBool of bool | VFloat of float| VPtr of int|
     VFun of typ*typ*variable*exp | VFix of typ*typ*variable*variable*exp
 	     | VNaN | VUnit | VPair of exp*exp
 	     | VCons of exp*exp | VEmptyList of typ
-        
+
+type environment   = (int*value) list		 
 
 let string_of_uni_op (op:uniOpExpression) : string=
   match op with
@@ -46,6 +48,8 @@ let string_of_uni_op (op:uniOpExpression) : string=
     | UTail  -> "tl"
     | UHead  -> "hd"
     | UEmpty -> "empty"
+    | UBang  -> "!"
+    | URef   -> "ref"
 	
 let string_of_bin_op (op:binOpExpression) : string=
   match op with
@@ -58,6 +62,8 @@ let string_of_bin_op (op:binOpExpression) : string=
     |BGT   -> ">"
     |BLT   -> "<"
     |BEq   -> "="
+    | BSetEq -> "!="
+    | BSeq   -> ";"
 
 let string_of_bool_op (op:boolOp): string =
   match op with
@@ -69,6 +75,7 @@ let val_to_exp v =
     | VNaN     -> ENaN
     | VUnit    -> EUnit
     | VEmptyList t -> EEmptyList t
+    | VPtr  n  -> EPtr n
     | VInt   n -> EInt n
     | VBool  b -> EBool b
     | VFloat f -> EFloat f
@@ -80,6 +87,7 @@ let val_to_exp v =
 let rec string_of_expression (e:exp): string =
   match e with
     | ENaN     -> "NaN"
+    | EPtr  n  -> "Ptr: "^string_of_int  n
     | EEmptyList t -> " [] : "^(string_of_type t)
     | ECons (first,rest) -> "( Cons "^(string_of_expression first)^
       " "^(string_of_expression rest)^" )"
@@ -122,6 +130,7 @@ and string_of_value (v:value) : string=
   match v with
     | VNaN     -> "NaN"
     | VUnit    -> "()"
+    | VPtr   n -> "Ptr: "^string_of_int n
     | VInt   n -> string_of_int n
     | VBool  b -> string_of_bool b
     | VFloat f -> string_of_float f
@@ -147,6 +156,7 @@ and string_of_type (t:typ) : string=
     | TInt         -> "int"
     | TFloat       -> "float"
     | TBool        -> "bool"
+    | TRef  t      -> "<"^(string_of_type t)^">"
     | TList  t      -> "["^(string_of_type t)^"]"
     | TPair (t1,t2) -> (string_of_type t1) ^ " * " ^ (string_of_type t2)
     | TArrow (t1,t2) -> (string_of_type t1) ^ "->" ^ (string_of_type t2)
@@ -175,12 +185,13 @@ let rec is_value (e:exp) =
     | _ -> false      
 
       
-let rec subst (v :value) (var:variable) (e:exp) =
+let rec subst (v :value) (var:variable) (e:exp) : exp =
   let sub = subst v var in
   let (Var varname) = var in
   match e with
     | ENaN             -> ENaN
     | EUnit            -> EUnit
+    | EPtr   n         -> EPtr n   
     | EEmptyList t     -> EEmptyList t
     | EInt   n         -> EInt n      
     | EBool  b         -> EBool b
@@ -210,36 +221,36 @@ let rec subst (v :value) (var:variable) (e:exp) =
 	EFix(t1,t2,Var var1,Var var2,sub e)
 	
     
-let rec eval (e:exp) : value =
+let rec eval (env:environment) (e:exp) : environment*value =
     if (is_value e)
-    then exp_to_value e
-    else step e |> eval
+    then (env,exp_to_value e)
+    else let (env,e) = step env e in eval env e
 
-and eval_bool_op (op:boolOp) (e1:exp) (e2:exp)=
-  let v1 = eval e1 in
-  let v2 = eval e2 in
+and eval_bool_op (env:environment) (op:boolOp) (e1:exp) (e2:exp) : (environment*value) =
+  let (env, v1) = eval env e1 in
+  let (env,v2) = eval env e2 in
   match (op,v1,v2) with
-    | (BAnd,VBool v1, VBool v2)  -> VBool (v1 && v2)
-    | (BOr,VBool v1, VBool v2)   -> VBool (v1 || v2)
+    | (BAnd,VBool v1, VBool v2)  -> (env, VBool (v1 && v2))
+    | (BOr,VBool v1, VBool v2)   -> (env, VBool (v1 || v2))
     | _ -> failwith
       (Printf.sprintf "Was expecting a Boolean, instead found :(%s %s %s)"
 	 (string_of_bool_op op)
 	 (string_of_value v1)
 	 (string_of_value v2))
 
-and eval_uni_op (op:uniOpExpression) (e:exp) =
-  let v = eval e in
+and eval_uni_op (env:environment) (op:uniOpExpression) (e:exp): (environment*value) =
+  let (env,v) = eval env e in
   match (op,v) with
-    | (UFst, VPair (v1,v2)) -> eval v1
-    | (USnd, VPair (v1,v2)) -> eval v2
+    | (UFst, VPair (v1,v2)) -> eval env v1
+    | (USnd, VPair (v1,v2)) -> eval env v2
     | (UFst,_) | (USnd,_) -> failwith
       (Printf.sprintf "Was expecting Pair, instead found :(%s %s)"
 	 (string_of_uni_op op)
 	 (string_of_value v))
-    | (UHead, VCons (v1,v2)) -> eval v1
-    | (UTail, VCons (v1,v2)) -> eval v2
-    | (UEmpty, VCons (v1,v2)) -> VBool false
-    | (UEmpty, VEmptyList _) -> VBool true
+    | (UHead, VCons (v1,v2)) -> eval env v1
+    | (UTail, VCons (v1,v2)) -> eval env v2
+    | (UEmpty, VCons (v1,v2)) -> (env ,VBool false)
+    | (UEmpty, VEmptyList _) -> (env,VBool true)
     | (UHead ,_)|(UTail ,_)->
        failwith
       (Printf.sprintf "Was expecting Non-empty List, instead found :(%s %s)"
@@ -250,30 +261,57 @@ and eval_uni_op (op:uniOpExpression) (e:exp) =
       (Printf.sprintf "Was expecting List, instead found :(%s %s)"
 	 (string_of_uni_op op)
 	 (string_of_value v))
+    | (UBang,VPtr n ) -> begin
+      try (env,List.assoc n env)
+      with _ -> failwith
+	(Printf.sprintf "Null pointer found in :(%s %s)"
+	   (string_of_uni_op op)
+	   (string_of_value v))
+	end
+    | (UBang,v) -> failwith
+	(Printf.sprintf "Attempted to derefrence non pointer: %s"
+	   (string_of_value v))
+    | (URef,v) -> let n = (List.length env) in ((n,v)::env, VPtr n)
+	  
       
-and eval_bin_op (op:binOpExpression) (e1:exp) (e2:exp)=
-  let v1 = eval e1 in
-  let v2 = eval e2 in
-  match (v1,v2) with
-    | (VBool _,_) |  ( _,VBool _)  -> failwith
+and eval_bin_op (env:environment) (op:binOpExpression) (e1:exp) (e2:exp)=
+  let (env,v1) = eval env e1 in
+  let (env,v2) = eval env e2 in
+  (* taken from partially from
+   * https://stackoverflow.com/questions/37091784/ocaml-function-replace-a-element-in-a-list
+   *)
+   let replace lst position replacement = 
+     List.map
+       (fun (index,x) -> if index = position then (index,replacement) else (index,x))
+       lst
+   in
+  match (op,v1,v2) with
+    | (BSeq,v1,v2)   -> (env,v2)
+    | (BSetEq, VPtr n, v) -> (replace env n v, VUnit)
+    | (BSetEq, _, _) -> failwith
+      (Printf.sprintf "Attempted to assign value to non pointer in :(%s %s %s)"
+	 (string_of_bin_op op)
+	 (string_of_value v1)
+	 (string_of_value v2))
+    | (_,VBool _,_) |  ( _,_,VBool _)  -> failwith
       (Printf.sprintf "Was expecting number, instead found :(%s %s %s)"
 	 (string_of_bin_op op)
 	 (string_of_value v1)
 	 (string_of_value v2))
-    | (VNaN,_)           -> VNaN
-    | (_,VNaN)	         -> VNaN
-    | (VInt n1, VInt n2) -> eval_bin_op_int op n1 n2
-    | (VInt n1, VFloat f2) -> eval_bin_op_float op (float_of_int n1) f2
-    | (VFloat f1, VInt n2) -> eval_bin_op_float op f1 (float_of_int n2)
-    | (VFloat f1, VFloat f2) -> eval_bin_op_float op f1 f2
+    | (_,VNaN,_)           -> (env, VNaN)
+    | (_,_,VNaN)	         -> (env,VNaN)
+    | (_,VInt n1, VInt n2) -> eval_bin_op_int env op n1 n2
+    | (_,VInt n1, VFloat f2) -> eval_bin_op_float env op (float_of_int n1) f2
+    | (_,VFloat f1, VInt n2) -> eval_bin_op_float env op f1 (float_of_int n2)
+    | (_,VFloat f1, VFloat f2) -> eval_bin_op_float env op f1 f2
     | _ -> failwith
       (Printf.sprintf "Was expecting number, instead found :(%s %s %s)"
 	 (string_of_bin_op op)
 	 (string_of_value v1)
 	 (string_of_value v2))
       
-and eval_bin_op_int (op:binOpExpression) (n1:int) (n2:int)=
-  match op with
+and eval_bin_op_int  (env:environment) (op:binOpExpression) (n1:int) (n2:int)=
+  (env, match op with
     | BAdd  -> VInt( n1 +  n2)
     | BSub  -> VInt( n1 - n2)
     | BMult -> VInt( n1 * n2)
@@ -283,129 +321,139 @@ and eval_bin_op_int (op:binOpExpression) (n1:int) (n2:int)=
     | BGT  ->  VBool (n1 > n2)
     | BEq ->   VBool (n1 = n2)             
     | BDiv  -> if n2 ==0 then VNaN else VInt( n1 / n2)
+    | BSeq  -> VInt n2
+    | BSetEq -> failwith
+      (Printf.sprintf "Attempted to assign value to non pointer in :(%s %s %s)"
+	 (string_of_bin_op op)
+	 (string_of_int n1)
+	 (string_of_int n2)))
 
-and eval_bin_op_float  (op:binOpExpression) (f1:float) (f2:float)=
-  match op with
-    | BAdd  -> VFloat( f1 +.  f2)
-    | BSub  -> VFloat( f1 -. f2)
-    | BMult -> VFloat( f1 *. f2)
-    | BLEq  -> VBool (f1 <= f2)
-    | BGEq  -> VBool (f1 >= f2)
-    | BLT  ->  VBool (f1 < f2)
-    | BGT  ->  VBool (f1 > f2)
-    | BEq ->   VBool (f1 = f2)   
-    | BDiv  -> if f2 ==0.0 then VNaN else VFloat( f1 /. f2)
-	
-and eval_bool (e:exp) : bool=
-    let v = eval e in
-  match v with
-    |  VBool b -> b
-    |  _ -> failwith (Printf.sprintf
-			"Type error, was expecting bool instead got: %s from %s"
-			(string_of_value v) (string_of_expression e))
+and eval_bin_op_float (env:environment) (op:binOpExpression) (f1:float) (f2:float)=
+  (env,match op with
+    | BAdd   -> VFloat( f1 +.  f2)
+    | BSub   -> VFloat( f1 -. f2)
+    | BMult  -> VFloat( f1 *. f2)
+    | BLEq   -> VBool (f1 <= f2)
+    | BGEq   -> VBool (f1 >= f2)
+    | BLT    ->  VBool (f1 < f2)
+    | BGT    ->  VBool (f1 > f2)
+    | BEq    ->   VBool (f1 = f2)   
+    | BDiv   -> if f2 ==0.0 then VNaN else VFloat( f1 /. f2)
+    | BSeq   -> VFloat f2
+    | BSetEq -> failwith
+      (Printf.sprintf "Attempted to assign value to non pointer in :(%s %s %s)"
+	 (string_of_bin_op op)
+	 (string_of_float f1)
+	 (string_of_float f2)))
 
-and step (e:exp) : exp =
+and step (env:environment) (e:exp) : (environment*exp) =
   match e with
-    | ENaN             -> ENaN
-    | EEmptyList t     -> EEmptyList t
-    | EUnit            -> EUnit
-    | EInt   n         -> EInt n      
-    | EBool  b         -> EBool b
-    | EFloat f         -> EFloat f
-    | ECons (e1,e2)    -> step_cons e1 e2
-    | EPair (e1,e2)    -> step_pair e1 e2
-    | EFun (t1,t2,var,e)        -> EFun (t1,t2,var,e)
-    | EFix (t1,t2,var1,var2,e)  -> EFix (t1,t2,var1,var2,e)
-    | EUni (op,e)      -> step_uni_op op e
-    | EBin (op,e1, e2) -> step_bin_op op e1 e2      
-    | EBinBool (op,e1, e2) -> step_bool_op op e1 e2
-    | EIF (e1,e2,e3)   -> step_if e1 e2 e3
+    | ENaN             -> (env,ENaN)
+    | EEmptyList t     -> (env,EEmptyList t)
+    | EUnit            -> (env,EUnit)
+    | EInt   n         -> (env,EInt n)
+    | EBool  b         -> (env,EBool b)
+    | EFloat f         -> (env,EFloat f)
+    | ECons (e1,e2)    -> step_cons env e1 e2
+    | EPair (e1,e2)    -> step_pair env e1 e2
+    | EFun (t1,t2,var,e)        -> (env,EFun (t1,t2,var,e))
+    | EFix (t1,t2,var1,var2,e)  -> (env,EFix (t1,t2,var1,var2,e))
+    | EUni (op,e)      -> step_uni_op env op e
+    | EBin (op,e1, e2) -> step_bin_op env op e1 e2      
+    | EBinBool (op,e1, e2) -> step_bool_op env op e1 e2
+    | EIF (e1,e2,e3)   -> step_if env e1 e2 e3
     | ELet (t,var, e1,e2) -> if is_value e1
-      then subst (exp_to_value e1) var e2
-      else  ELet (t,var,step e1,e2)
-    | EApp (e1 , e2)    -> step_app e1 e2
-    | EVar (Var var1)     ->failwith
+      then (env,subst (exp_to_value e1) var e2)
+      else  let (env,e1) = step env e1 in (env, ELet (t,var, e1,e2))
+    | EApp (e1 , e2)    -> let (env,e) =step_app env e1 e2 in  (env,e)
+    | EVar (Var var1)     -> failwith
       (Printf.sprintf "Unbound variable :%s"
 	 var1)
 
-and step_cons e1 e2 =
+and step_cons (env:environment) (e1:exp) (e2:exp) : (environment*exp)=
   if is_value e1 then
     begin
-      if is_value e2 then ECons (e1,e2)
-      else ECons(e1,step e2)
+      if is_value e2 then (env,ECons (e1,e2))
+      else let (env, e2) =(step env e2) in (env,ECons(e1,e2))
     end
-  else ECons(step e1,e2)
+  else let (env, e1) =(step env e1) in (env,ECons(e1,e2))
 
-and step_pair e1 e2 =
+and step_pair (env:environment) (e1:exp) (e2:exp) : (environment*exp) = 
   if is_value e1 then
     begin
-      if is_value e2 then EPair (e1,e2)
-      else EPair(e1,step e2)
+      if is_value e2 then (env,EPair (e1,e2))
+      else let (env ,e2) = step env e2 in (env,EPair(e1, e2))
     end
-  else EPair(step e1,e2)
+  else let (env ,e1) = step env e1 in (env,EPair( e1,e2))
 
-and step_uni_op op e =
+and step_uni_op (env:environment) (op:uniOpExpression) (e:exp): (environment*exp) =
   if is_value e then
-    val_to_exp (eval_uni_op op e)
-  else EUni (op, step e)
+    let (env,v) = (eval_uni_op env op e) in (env,val_to_exp v)
+  else let (env,e) = step env e in (env,EUni (op, e))
     
-and step_bin_op op e1 e2 =
+and step_bin_op (env:environment) (op:binOpExpression) (e1:exp) (e2:exp): (environment*exp) =
   if is_value e1 then
     begin
-      if is_value e2 then val_to_exp (eval_bin_op op e1 e2)
-      else EBin (op, e1, step e2)
+      if is_value e2 then let (env,v) =(eval_bin_op env op e1 e2) in (env, val_to_exp v)
+      else let (env,e2) = step env e2 in (env,EBin (op, e1, e2))
     end
-  else EBin (op,step e1, e2)
+  else  let (env,e1) = step env e1 in (env,EBin (op, e1, e2))
       
-and step_bool_op op e1 e2 =
+and step_bool_op (env:environment) (op:boolOp) (e1:exp) (e2:exp): (environment*exp) =
   if is_value e1 then
     begin
-      if is_value e2 then val_to_exp (eval_bool_op op e1 e2)
-      else EBinBool (op, e1, step e2)
+      if is_value e2 then let (env,v) = (eval_bool_op env op e1 e2) in (env, val_to_exp v)
+      else let (env,e2) = step env e2 in (env,EBinBool (op, e1, e2))
     end
-  else EBinBool (op,step e1, e2)
+  else let (env,e1) = (step env e1) in (env,EBinBool (op, e1, e2))
 
-and step_if e1 e2 e3 =
+and step_if (env:environment) (e1:exp) (e2:exp) (e3:exp) : (environment*exp) =
   if is_value e1 then
     let v = exp_to_value e1
     in
     begin
       match v with
-	| VBool true -> e2
-	| VBool false -> e3
+	| VBool true -> (env,e2)
+	| VBool false -> (env,e3)
 	|  _ -> failwith
 	  (Printf.sprintf
 	     "Type error, was expecting bool instead got: %s from %s"
 	     (string_of_value v) (string_of_expression e1))
     end
-  else EIF (step e1,e2,e3)
+  else let (env,e1) = step env e1 in (env, EIF (e1,e2,e3))
 
-and step_app e1 e2 =
+and step_app (env:environment) (e1:exp) (e2:exp) : (environment*exp) =
   if is_value e1 then
     if is_value e2 then
       begin
       match e1 with
-	| EFun (_,_,var,e3) -> subst (exp_to_value e2) var e3
+	| EFun (_,_,var,e3) -> (env, subst (exp_to_value e2) var e3)
 	| EFix (_,_,var1,var2,e3) as vF ->
-	  subst (exp_to_value vF) var1 (subst (exp_to_value e2) var2 e3)
+	  (env,subst (exp_to_value vF) var1 (subst (exp_to_value e2) var2 e3))
 	| _ -> failwith
 	  (Printf.sprintf "Was expecting a function, instead found :%s %s"
 	     (string_of_expression e1)
 	     (string_of_expression e2))
       end
-    else  EApp ( e1, step e2)
+    else  let (env,e2) = step env e2 in (env, EApp ( e1, e2))
   else
-    EApp ( step e1, e2)
+     let (env,e1) = step env e1  in (env, EApp (  e1, e2))
 
   
 let rec typecheck (c:ctx) (e:exp) : typ =
-  let check_context v c = List.assoc v c 
+  let check_context v = List.assoc v c 
   in
   match e with
     | ENaN   -> TNaN
     | EUnit   -> TUnit
     | EEmptyList t  -> TList t
-    | EVar v ->  check_context v c
+    | EVar v ->  begin
+      try check_context v
+      with _ ->
+	failwith
+	(Printf.sprintf "Unbound variable %s"
+	   (string_of_expression e))
+    end
     | EInt _ -> TInt
     | EFloat _ -> TFloat
     | EBool _  -> TBool
