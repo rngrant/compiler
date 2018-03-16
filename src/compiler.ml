@@ -34,7 +34,7 @@ let input_handler filename p_mode s_mode t_mode =
   else if p_mode then filename_to_exp filename |> string_of_expression
   else if s_mode then filename_to_exp filename |> (output_steps "")
   else let expression = filename_to_exp filename
-       in Lang.typecheck [] expression ; expression |> Lang.eval |> string_of_value
+       in ignore (Lang.typecheck [] expression); expression |> Lang.eval |> string_of_value
 
 let main () = begin
   let speclist  =

@@ -11,7 +11,8 @@
 %token FST SND
 %token HEAD TAIL EMPTY
 %token LBRACE RBRACE
-%token NAN UNIT
+%token NAN 
+%token UNIT REF SETEQUAL BANG SEMICOLON
 %token FUN RARROW
 %token LPAREN RPAREN
 %token LET  EQUAL IN

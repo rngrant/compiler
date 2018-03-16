@@ -25,6 +25,8 @@ let token_from_symbol symbol =
     |'>'      -> GTHAN
     | ','     -> COMMA
     |'<'      -> LTHAN
+    | '!'     -> BANG
+    | ';'     -> SEMICOLON
     | _       -> failwith
       (Printf.sprintf "Expecting symbol, instead found :%c"
 	 symbol)
@@ -40,6 +42,7 @@ let token_from_word word =
     | "in"   -> IN
     | "fun"  -> FUN
     | "fix"  -> FIX
+    | "ref"  -> REF
     | "true" -> BOOL true
     | "false" -> BOOL false
     | "and"   -> AND
@@ -61,7 +64,8 @@ let token_from_word word =
     | ">="   -> GREATEQ
     | "->"   -> RARROW
     | "()"   -> UNIT
-    | "::"   -> APPEND      
+    | "::"   -> APPEND
+    | ":="   -> SETEQUAL
     | ":"    -> COLON
     | _      ->  failwith
       (Printf.sprintf
@@ -75,7 +79,7 @@ let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
 let digit      = ['0'-'9']
 let single_char_symbol =
-  '(' | ')' | '+' | '-' | '/' | '=' |'*'|','| '<' | '>'| '['|']'
+  '(' | ')' | '+' | '-' | '/' | '=' |'*'|','| '<' | '>'| '['|']' | '!' | ';'
 let multi_char_symbol =  '-' | '<' | '=' | '>' | ':'
 let character = ['a'-'z']|['A'-'Z']
 let variable_characters = character | '_'| digit
