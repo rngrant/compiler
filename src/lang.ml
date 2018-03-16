@@ -165,6 +165,7 @@ and  exp_to_value e =
   match e with     
     | ENaN     -> VNaN
     | EUnit    -> VUnit
+    | EPtr n    -> VPtr n
     | EEmptyList t   -> VEmptyList t
     | EInt   n -> VInt n
     | EBool  b -> VBool b
@@ -179,7 +180,7 @@ and  exp_to_value e =
       
 let rec is_value (e:exp) =
   match e with
-    | ENaN |EUnit |EInt _ | EBool _ | EFloat _ |EEmptyList _| EFun _| EFix _ -> true
+    | ENaN |EUnit |EInt _ | EPtr _| EBool _ | EFloat _ |EEmptyList _| EFun _| EFix _ -> true
     |  EPair (e1,e2) -> is_value e1 && is_value e2
     |  ECons (e1,e2) -> is_value e1 && is_value e2
     | _ -> false      
@@ -349,6 +350,7 @@ and eval_bin_op_float (env:environment) (op:binOpExpression) (f1:float) (f2:floa
 and step (env:environment) (e:exp) : (environment*exp) =
   match e with
     | ENaN             -> (env,ENaN)
+    | EPtr n           -> (env, EPtr n)
     | EEmptyList t     -> (env,EEmptyList t)
     | EUnit            -> (env,EUnit)
     | EInt   n         -> (env,EInt n)
@@ -446,6 +448,7 @@ let rec typecheck (c:ctx) (e:exp) : typ =
   match e with
     | ENaN   -> TNaN
     | EUnit   -> TUnit
+    | EPtr n  -> TInt
     | EEmptyList t  -> TList t
     | EVar v ->  begin
       try check_context v
@@ -527,6 +530,12 @@ and typecheck_uni_op (c:ctx) (op:uniOpExpression) (e:exp) : typ =
 	  (string_of_uni_op op)
 	  (string_of_type t)
 	  (string_of_expression e))
+    | (UBang,TRef t)   ->  t
+    | (UBang, t   )    -> failwith
+	(Printf.sprintf "Attempted to derefrence non pointer of type: %s in\n %s"
+	   (string_of_type t)
+	   (string_of_expression e))
+    | (URef,t)        -> TRef t
       
 and typecheck_bin_op (c:ctx) (op:binOpExpression) (e1:exp) (e2:exp) : typ =
   let t1 = typecheck c e1 in
@@ -534,13 +543,26 @@ and typecheck_bin_op (c:ctx) (op:binOpExpression) (e1:exp) (e2:exp) : typ =
   let ret_typ = begin
     match op with
       | BAdd | BSub | BMult| BDiv -> t1
+      | BSeq                      -> t2
       | BLEq | BGEq | BGT| BLT| BEq -> TBool
+      | BSetEq                    -> TUnit
   end
   in
-  match (t1, t2) with
-    | (TInt, TInt)     -> ret_typ
-    | (TFloat, TFloat) -> ret_typ
-    | (TNaN,_) | (_,TNaN) -> if ret_typ =TBool then TBool else TNaN
+  match (op,t1, t2) with
+    | (BSeq ,_,_)        -> ret_typ
+    | (BSetEq,TRef t1,t2)    -> if t1=t2 then ret_typ else
+	failwith
+	(Printf.sprintf "Attempted to assign expression of type: %s to pointer of type %s in\n%s"
+	   (string_of_type t2)
+	   (string_of_type t1)
+	   (string_of_expression (EBin(op,e1,e2))))
+    | (BSetEq,t1,t2)    -> failwith
+	(Printf.sprintf "Attempted to assign to non pointer of type: %s in\n %s"
+	   (string_of_type t1)
+	   (string_of_expression (EBin(op,e1,e2))))
+    | (_,TInt, TInt)     -> ret_typ
+    | (_,TFloat, TFloat) -> ret_typ
+    | (_,TNaN,_) | (_,_,TNaN) -> if ret_typ =TBool then TBool else TNaN
     | _ -> failwith
       (Printf.sprintf
 	 "Was expecting compatible numerical types, instead found %s and %s in\n %s"
