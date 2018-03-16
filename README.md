@@ -59,13 +59,14 @@ This project currently supports evaluation of a
 e ::= n | f | (e) | e1 + e2 | e1 - e2 | e1 * e2 | e1 /e2 
 ..    | true | false | e1 <= e2 |e1 < e2|e1 = e2||e1 > e2 |e1 >= e2
 ..    | if e1 then e2 else e3 | NaN | e1 and e2 | e1 or e2
-..    | let x = e1 in e2 | fun x -> e | fix x y -> e| e1 e2
-..    |() | (e1,e2) | fst e | snd e|
+..    | let x : t = e1 in e2 | fun (x:t1) :t2 = e
+..    | fix f (y :t1) : t2 = e
+..    | e1 e2 |() | (e1,e2) | fst e | snd e|
 ..    |[] : t | e1 :: e2 | hd e | tl e | empty e
 ..    | ref e | e1 := e2 | !e | e1 ; e2 | while e1 do e2 end
 
 
-t ::= t1*t2 | [t]
+t ::= int | bool | t1 -> t2 | unit | t1 * t2 | <t>
 
 ## Changelog
 
