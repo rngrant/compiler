@@ -1,4 +1,4 @@
-numTest=36
+numTest=38
 
 for i in `seq 1 $numTest`;
 do

@@ -8,8 +8,9 @@ Implemented by Reilly Noonan Grant
 This project is the begining of a compiler written in OCaml. It is
 being created primarily for educational purposes.
 
-Currently, this project implements a basic parser, and lexer for
-support for a basic interpreter of a programing language.
+Currently, this project implements a parser, and lexer for
+support for a interpreter of a programing language based on
+OCaml.
 
 ## Setup Instructionse
 Ensure that OCaml is installed
@@ -61,21 +62,46 @@ e ::= n | f | (e) | e1 + e2 | e1 - e2 | e1 * e2 | e1 /e2
 ..    | if e1 then e2 else e3 | NaN | e1 and e2 | e1 or e2
 ..    | let x : t = e1 in e2 | fun (x:t1) :t2 = e
 ..    | fix f (y :t1) : t2 = e
-..    | e1 e2 |() | (e1,e2) | fst e | snd e|
+..    | e1 e2 |() | (e1,e2,..,en) | fst e | snd e| nth n e
 ..    |[] : t | e1 :: e2 | hd e | tl e | empty e
 ..    | ref e | e1 := e2 | !e | e1 ; e2 | while e1 do e2 end
 
 
-t ::= int | bool | t1 -> t2 | unit | t1 * t2 | <t>
+t ::= int | bool | t1 -> t2 | () | t1 * t2* .. *tn | <t>
 
 ## Changelog
 
-Build on 03/16/18:
+Build on 03/16/18 First:
+### New features
+
+- Replaced Pairs with Tuples, a more general version
+- Added the "nth" unary operator
+- Updated types to reflect this
+
+### changes
+
+- Implemented above features
+
+### Known Bugs
+
+- Do not support nested variables with the same name
+- Does not currently support currying
+
+
+
+Build on 03/16/18 First:
 ### New features
 
 - Updated Grammar in readme
-- Added state
-- Updated tests to support new featurs
+- Added state:
+--Ref creates a ref cell, which can be derefrenced with
+.. ! to get the value assigned
+-- := assigns a ref cell to have a new value of the same type
+-- ; allows for sequences of expression, by evaluating the first
+.. expression, then evaluating the second and returning it
+-- Added while loops
+- Updated tests to support new features
+
 
 ### changes
 
